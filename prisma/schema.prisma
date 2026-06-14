@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+// -----------------------------------------------------------------------------
+// CORE USERS (The Authentication Table)
+// -----------------------------------------------------------------------------
+model User {
+  usernameOrPhone String   @id // Teachers/Admins = Phone Number | Students = Admission Number
+  email           String?  @unique
+  password        String   // Hashed password
+  role            Role     @default(STUDENT)
+  firstName       String
+  lastName        String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  teacherProfile  TeacherProfile?
+  studentProfile  StudentProfile?
+
+  @@map("users")
+}
+
+// -----------------------------------------------------------------------------
+// ROLE-SPECIFIC PROFILES
+// -----------------------------------------------------------------------------
+model TeacherProfile {
+  id           String   @id @default(uuid())
+  teacherPhone String   @unique // Maps back to User primary key
+  user         User     @relation(fields: [teacherPhone], references: [usernameOrPhone], onDelete: Cascade)
+  employeeId   String   @unique 
+  department   String?
+  hiredAt      DateTime @default(now())
+
+  classes      Class[]  
+
+  @@map("teacher_profiles")
+}
+
+model StudentProfile {
+  id              String   @id @default(uuid())
+  admissionNumber String   @unique // Maps back to User primary key
+  user            User     @relation(fields: [admissionNumber], references: [usernameOrPhone], onDelete: Cascade)
+  dateOfBirth     DateTime
+  guardianName    String
+  guardianPhone   String   // Parent's contact info stored here safely!
+
+  enrollments     Enrollment[]
+  attendance      Attendance[]
+
+  @@map("student_profiles")
+}
+
+// -----------------------------------------------------------------------------
+// ACADEMICS
+// -----------------------------------------------------------------------------
+model Class {
+  id          String         @id @default(uuid())
+  name        String         
+  code        String         @unique // e.g., "B7-GOLD-2026"
+  roomNumber  String?
+  
+  // Changing these to optional (?) allows the class to exist without a teacher
+  teacherId   String?
+  teacher     TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+
+  enrollments Enrollment[]
+  attendance  Attendance[]
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("classes")
+}
+
+model Enrollment {
+  id             String   @id @default(uuid())
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId        String
+  class          Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  year           String   // "2025/2026", "2026/2027"
+  isActive       Boolean  @default(true)
+  
+  enrolledAt     DateTime @default(now())
+  
+  midtermGrade   Float?
+  finalExamGrade Float?
+  overallGrade   String?        
+
+  // Updated constraint: Allows the student back in the same class if the year is different!
+  @@unique([studentId, classId, year]) 
+  @@map("enrollments")
+}
+
+model Attendance {
+  id        String           @id @default(uuid())
+  date      DateTime         
+  status    AttendanceStatus
+  remarks   String?          
+
+  studentId String
+  student   StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId   String
+  class     Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, classId, date]) 
+  @@map("attendance")
+}
