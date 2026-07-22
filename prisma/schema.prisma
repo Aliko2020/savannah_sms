@@ -1,13 +1,15 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
   output   = "../src/generated/prisma"
-  engineType = "library"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
+// ============================================================================
+// ENUMS
+// ============================================================================
 enum Role {
   SUPER_ADMIN
   ADMIN
@@ -22,109 +24,274 @@ enum AttendanceStatus {
   EXCUSED
 }
 
-// -----------------------------------------------------------------------------
-// CORE USERS (The Authentication Table)
-// -----------------------------------------------------------------------------
-model User {
-  usernameOrPhone String   @id // Teachers/Admins = Phone Number | Students = Admission Number
-  email           String?  @unique
-  password        String   // Hashed password
-  role            Role     @default(STUDENT)
-  firstName       String
-  lastName        String
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+enum GuardianRelation {
+  MOTHER
+  FATHER
+  GUARDIAN
+  OTHER
+}
 
-  teacherProfile  TeacherProfile?
-  studentProfile  StudentProfile?
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum ClassCategory {
+  PRE_SCHOOL
+  PRIMARY
+  JHS
+}
+
+enum Department {
+  PRE_SCHOOL
+  PRIMARY
+  JHS
+  ICT
+  NON_TEACHING
+}
+
+enum EmploymentStatus {
+  FULL_TIME
+  PART_TIME
+  SUBSTITUTE
+}
+
+enum ContractType {
+  PERMANENT
+  FIXED_TERM
+  TEMPORARY
+}
+
+// ============================================================================
+// USERS & AUTH
+// ============================================================================
+model User {
+  id        String  @id @default(uuid())
+  username  String  @unique // login value: teacher/admin phone, student admission no.
+  email     String? @unique
+  password  String // hashed
+  role      Role    @default(STUDENT)
+  firstName String
+  otherName String?
+  lastName  String
+  isActive  Boolean @default(true)
+
+  lastLoginAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teacherProfile TeacherProfile?
+  studentProfile StudentProfile?
 
   @@map("users")
 }
 
-// -----------------------------------------------------------------------------
-// ROLE-SPECIFIC PROFILES
-// -----------------------------------------------------------------------------
 model TeacherProfile {
-  id           String   @id @default(uuid())
-  teacherPhone String   @unique // Maps back to User primary key
-  user         User     @relation(fields: [teacherPhone], references: [usernameOrPhone], onDelete: Cascade)
-  employeeId   String   @unique 
-  department   String?
-  hiredAt      DateTime @default(now())
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId    String     @unique
+  department    Department?
+  phone         String?
+  gender        Gender?
+  qualification String?
+  hiredAt       DateTime @default(now())
 
-  classes      Class[]  
+  employmentStatus  EmploymentStatus?
+  contractType      ContractType?
+  bankName          String?
+  bankAccountNumber String?
+  ssnitNumber       String?
+
+  formClasses   Class[] // homerooms where this teacher is the form teacher
+  classSubjects ClassSubject[] // subjects this teacher teaches
 
   @@map("teacher_profiles")
 }
 
 model StudentProfile {
   id              String   @id @default(uuid())
-  admissionNumber String   @unique // Maps back to User primary key
-  user            User     @relation(fields: [admissionNumber], references: [usernameOrPhone], onDelete: Cascade)
-  dateOfBirth     DateTime
-  guardianName    String
-  guardianPhone   String   // Parent's contact info stored here safely!
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  admissionNumber String   @unique
+  dateOfBirth     DateTime @db.Date
+  gender          Gender?
 
-  enrollments     Enrollment[]
-  attendance      Attendance[]
+  enrollments Enrollment[]
+  attendance  Attendance[]
+  scores      Score[]
+  guardians   StudentGuardian[]
 
   @@map("student_profiles")
 }
 
-// -----------------------------------------------------------------------------
-// ACADEMICS
-// -----------------------------------------------------------------------------
-model Class {
-  id          String         @id @default(uuid())
-  name        String         
-  code        String         @unique // e.g., "B7-GOLD-2026"
-  roomNumber  String?
-  
-  // Changing these to optional (?) allows the class to exist without a teacher
-  teacherId   String?
-  teacher     TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+// ============================================================================
+// GUARDIANS  (many-to-many: a guardian can have several children)
+// ============================================================================
+model Guardian {
+  id             String  @id @default(uuid())
+  fullName       String
+  phone          String
+  alternatePhone String?
+  email          String?
+  address        String?
 
-  enrollments Enrollment[]
-  attendance  Attendance[]
-  
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  students StudentGuardian[]
+
+  @@map("guardians")
+}
+
+model StudentGuardian {
+  studentId  String
+  student    StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardianId String
+  guardian   Guardian         @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  relation   GuardianRelation @default(GUARDIAN)
+  isPrimary  Boolean          @default(false)
+
+  @@id([studentId, guardianId])
+  @@map("student_guardians")
+}
+
+// ============================================================================
+// CALENDAR: ACADEMIC YEAR & TERMS
+// ============================================================================
+model AcademicYear {
+  id        String  @id @default(uuid())
+  name      String  @unique // "2025/2026"
+  isCurrent Boolean @default(false)
+
+  terms   Term[]
+  classes Class[]
+
+  @@map("academic_years")
+}
+
+model Term {
+  id             String       @id @default(uuid())
+  name           String // "First Term"
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  startDate      DateTime     @db.Date
+  endDate        DateTime     @db.Date
+  isCurrent      Boolean      @default(false)
+
+  scores     Score[]
+  attendance Attendance[]
+
+  @@unique([academicYearId, name])
+  @@map("terms")
+}
+
+// ============================================================================
+// ACADEMICS: HOMEROOM, SUBJECTS, TEACHING UNITS
+// ============================================================================
+// A Class is a homeroom for ONE academic year, e.g. "B7-GOLD" 2025/2026.
+model Class {
+  id         String        @id @default(uuid())
+  name       String
+  code       String        @unique // "B7-GOLD-2026"
+  category   ClassCategory @default(PRIMARY)
+  roomNumber String?
+
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+
+  // Optional so a class can exist before a form teacher is assigned.
+  // Unique: a teacher can be the form teacher of at most one class.
+  formTeacherId String? @unique
+  formTeacher   TeacherProfile? @relation(fields: [formTeacherId], references: [id], onDelete: SetNull)
+
+  enrollments   Enrollment[]
+  attendance    Attendance[]
+  classSubjects ClassSubject[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("classes")
 }
 
-model Enrollment {
-  id             String   @id @default(uuid())
-  studentId      String
-  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  classId        String
-  class          Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
-  year           String   // "2025/2026", "2026/2027"
-  isActive       Boolean  @default(true)
-  
-  enrolledAt     DateTime @default(now())
-  
-  midtermGrade   Float?
-  finalExamGrade Float?
-  overallGrade   String?        
+model Subject {
+  id       String        @id @default(uuid())
+  name     String        @unique // "Mathematics"
+  code     String        @unique // "MATH"
+  category ClassCategory @default(PRIMARY)
 
-  // Updated constraint: Allows the student back in the same class if the year is different!
-  @@unique([studentId, classId, year]) 
+  classSubjects ClassSubject[]
+
+  @@map("subjects")
+}
+
+// The teaching unit: one subject taught to one class by one teacher.
+model ClassSubject {
+  id        String  @id @default(uuid())
+  classId   String
+  class     Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  teacherId String?
+  teacher   TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+
+  scores Score[]
+
+  @@unique([classId, subjectId])
+  @@map("class_subjects")
+}
+
+// ============================================================================
+// ENROLLMENT, SCORES, ATTENDANCE
+// ============================================================================
+// Student <-> homeroom link. Year is implied by the class's academic year.
+model Enrollment {
+  id         String         @id @default(uuid())
+  studentId  String
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  classId    String
+  class      Class          @relation(fields: [classId], references: [id], onDelete: Restrict)
+  isActive   Boolean        @default(true)
+  enrolledAt DateTime       @default(now())
+
+  @@unique([studentId, classId])
   @@map("enrollments")
 }
 
+// One row per student, per subject, per term. Replaces grades on Enrollment.
+model Score {
+  id             String         @id @default(uuid())
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  classSubjectId String
+  classSubject   ClassSubject   @relation(fields: [classSubjectId], references: [id], onDelete: Restrict)
+  termId         String
+  term           Term           @relation(fields: [termId], references: [id], onDelete: Restrict)
+
+  classScore Decimal? @db.Decimal(5, 2) // continuous assessment
+  examScore  Decimal? @db.Decimal(5, 2)
+  total      Decimal? @db.Decimal(5, 2)
+  grade      String? // "A1".."F9" or "1".."9"
+  remark     String?
+
+  @@unique([studentId, classSubjectId, termId])
+  @@map("scores")
+}
+
+// Daily, homeroom-level. @db.Date makes the daily-uniqueness constraint real.
 model Attendance {
-  id        String           @id @default(uuid())
-  date      DateTime         
-  status    AttendanceStatus
-  remarks   String?          
+  id      String           @id @default(uuid())
+  date    DateTime         @db.Date
+  status  AttendanceStatus
+  remarks String?
 
   studentId String
-  student   StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
   classId   String
-  class     Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  class     Class          @relation(fields: [classId], references: [id], onDelete: Restrict)
+  termId    String
+  term      Term           @relation(fields: [termId], references: [id], onDelete: Restrict)
 
-  @@unique([studentId, classId, date]) 
+  @@unique([studentId, date])
   @@map("attendance")
 }

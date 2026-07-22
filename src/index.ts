@@ -1,7 +1,17 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { register, login } from './controllers/authController';
+import { login } from './controllers/authController';
+import userRoutes from './routes/userRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
+import academicYearRoutes from './routes/academicYearRoutes';
+import classRoutes from './routes/classRoutes';
+import teacherRoutes from './routes/teacherRoutes';
+import subjectRoutes from './routes/subjectRoutes';
+import termRoutes from './routes/termRoutes';
+import classSubjectRoutes from './routes/classSubjectRoutes';
+import scoreRoutes from './routes/scoreRoutes';
+import { globalErrorHandler } from './middlewares/errorHandler';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -11,15 +21,28 @@ app.use(cors());
 app.use(express.json());
 
 // Authentication System Routes
-app.post('/api/auth/register', register);
 app.post('/api/auth/login', login);
 
+// Admin-only user management (create TEACHER/ADMIN/SUPER_ADMIN/STUDENT accounts)
+app.use('/api/users', userRoutes);
+
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/academic-years', academicYearRoutes);
+app.use('/api/classes', classRoutes);
+app.use('/api/teachers', teacherRoutes);
+app.use('/api/subjects', subjectRoutes);
+app.use('/api/terms', termRoutes);
+app.use('/api/class-subjects', classSubjectRoutes);
+app.use('/api/scores', scoreRoutes);
+
 app.get('/status', (req, res) => {
-  res.status(200).json({ 
+  res.status(200).json({
     message: "Welcome to SavannaSMS API backend!",
     documentation: "https://github.com/Aliko2020/savannah_sms"
   });
 });
+
+app.use(globalErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server booting up on http://localhost:${PORT}`);

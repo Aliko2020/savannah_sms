@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { PrismaClient } from "../src/generated/prisma";
+import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import bcrypt from "bcrypt";
@@ -16,13 +16,19 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const adminIdentifier = "0507363607";
-  const adminPassword = "Sweetface@1734!";
+  const adminIdentifier = process.env.SEED_ADMIN_USERNAME;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!adminIdentifier || !adminPassword) {
+    throw new Error(
+      "SEED_ADMIN_USERNAME and SEED_ADMIN_PASSWORD must be set in .env",
+    );
+  }
 
   console.log("Starting database seeding...");
 
   const existingAdmin = await prisma.user.findUnique({
-    where: { usernameOrPhone: adminIdentifier },
+    where: { username: adminIdentifier },
   });
 
   if (existingAdmin) {
@@ -34,7 +40,7 @@ async function main() {
 
   const admin = await prisma.user.create({
     data: {
-      usernameOrPhone: adminIdentifier,
+      username: adminIdentifier,
       email: "admin@savannasms.com",
       password: hashedPassword,
       role: "SUPER_ADMIN",
@@ -45,7 +51,7 @@ async function main() {
   });
 
   console.log("Super Admin created successfully!");
-  console.log(`Username/Phone: ${admin.usernameOrPhone}`);
+  console.log(`Username/Phone: ${admin.username}`);
   console.log(`Password: ${adminPassword}`);
 }
 

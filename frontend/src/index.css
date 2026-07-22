@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #0a0a23;
+  --color-brand-light: #16163f;
+
+  --color-stat-population: #4f819a;
+  --color-stat-staff: #c9ab7f;
+  --color-stat-fees: #131a2c;
+  --color-stat-enrollment: #23b881;
+  --color-stat-classrooms: #7c6fdb;
+}
