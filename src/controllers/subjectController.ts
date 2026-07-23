@@ -6,26 +6,34 @@ export const listSubjects = async (req: Request, res: Response): Promise<Respons
   const { category } = req.query;
 
   const subjects = await prisma.subject.findMany({
-    where: category ? { category: String(category) as ClassCategory } : undefined,
+    where: category ? { categories: { has: String(category) as ClassCategory } } : undefined,
     orderBy: { name: 'asc' },
   });
 
   return res.status(200).json(subjects);
 };
 
-export const createSubject = async (req: Request, res: Response): Promise<Response> => {
-  const { name, code, category } = req.body;
+function isValidCategoryList(categories: unknown): categories is ClassCategory[] {
+  return (
+    Array.isArray(categories) &&
+    categories.length > 0 &&
+    categories.every((c) => Object.values(ClassCategory).includes(c))
+  );
+}
 
-  if (!name || !code || !category) {
-    return res.status(400).json({ error: 'name, code, and category are required.' });
+export const createSubject = async (req: Request, res: Response): Promise<Response> => {
+  const { name, code, categories } = req.body;
+
+  if (!name || !code || !categories) {
+    return res.status(400).json({ error: 'name, code, and categories are required.' });
   }
 
-  if (!Object.values(ClassCategory).includes(category)) {
-    return res.status(400).json({ error: 'Invalid category.' });
+  if (!isValidCategoryList(categories)) {
+    return res.status(400).json({ error: 'categories must be a non-empty list of valid categories.' });
   }
 
   try {
-    const subject = await prisma.subject.create({ data: { name, code, category } });
+    const subject = await prisma.subject.create({ data: { name, code, categories } });
     return res.status(201).json(subject);
   } catch (error: any) {
     if (error.code === 'P2002') {
@@ -38,10 +46,10 @@ export const createSubject = async (req: Request, res: Response): Promise<Respon
 
 export const updateSubject = async (req: Request, res: Response): Promise<Response> => {
   const id = String(req.params.id);
-  const { name, code, category } = req.body;
+  const { name, code, categories } = req.body;
 
-  if (category && !Object.values(ClassCategory).includes(category)) {
-    return res.status(400).json({ error: 'Invalid category.' });
+  if (categories !== undefined && !isValidCategoryList(categories)) {
+    return res.status(400).json({ error: 'categories must be a non-empty list of valid categories.' });
   }
 
   try {
@@ -50,7 +58,7 @@ export const updateSubject = async (req: Request, res: Response): Promise<Respon
       data: {
         ...(name !== undefined ? { name } : {}),
         ...(code !== undefined ? { code } : {}),
-        ...(category !== undefined ? { category } : {}),
+        ...(categories !== undefined ? { categories } : {}),
       },
     });
 

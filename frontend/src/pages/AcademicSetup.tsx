@@ -236,63 +236,8 @@ export function AcademicSetupPage() {
             </button>
           </div>
 
-          <div className="overflow-hidden rounded-lg bg-white shadow">
-            {!loadingClasses && classes && classes.length === 0 && (
-              <p className="px-6 py-8 text-center text-sm text-slate-500">No classes yet.</p>
-            )}
-
-            {!loadingClasses && classes && classes.length > 0 && (
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold">#</th>
-                    <th className="px-6 py-3 font-semibold">Name</th>
-                    <th className="px-6 py-3 font-semibold">Code</th>
-                    <th className="px-6 py-3 font-semibold">Category</th>
-                    <th className="px-6 py-3 font-semibold">Room</th>
-                    <th className="px-6 py-3 font-semibold">Class Teacher</th>
-                    <th className="px-6 py-3 font-semibold">Students</th>
-                    <th className="px-6 py-3 font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {classes.map((c, index) => (
-                    <tr key={c.id}>
-                      <td className="px-6 py-3 text-slate-400">{index + 1}</td>
-                      <td className="px-6 py-3 text-slate-900">{titleCase(c.name)}</td>
-                      <td className="px-6 py-3 text-slate-500">{c.code}</td>
-                      <td className="px-6 py-3 text-slate-500">{CLASS_CATEGORY_LABELS[c.category]}</td>
-                      <td className="px-6 py-3 text-slate-500">{c.roomNumber ?? '—'}</td>
-                      <td className="px-6 py-3 text-slate-500">
-                        {c.formTeacher ? formatName(c.formTeacher.firstName, c.formTeacher.lastName) : '—'}
-                      </td>
-                      <td className="px-6 py-3 text-slate-500">{c.studentCount}</td>
-                      <td className="px-6 py-3">
-                        <div className="flex justify-between gap-3">
-                          <button
-                            onClick={() => openEditForm(c)}
-                            className="text-sm font-medium text-brand hover:underline"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(c)}
-                            disabled={deleteClass.isPending}
-                            className="text-sm  text-red-500 font-bold  hover:underline disabled:opacity-50"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-
           {showForm && (
-            <div className="mt-4 rounded-lg bg-white p-6 shadow">
+            <div className="mb-4 rounded-lg bg-white p-6 shadow">
               <h2 className="mb-4 text-sm font-semibold text-slate-900">
                 {editingClass ? `Edit ${titleCase(editingClass.name)}` : 'Add class'}
               </h2>
@@ -375,6 +320,61 @@ export function AcademicSetupPage() {
             </div>
           )}
 
+          <div className="overflow-hidden rounded-lg bg-white shadow">
+            {!loadingClasses && classes && classes.length === 0 && (
+              <p className="px-6 py-8 text-center text-sm text-slate-500">No classes yet.</p>
+            )}
+
+            {!loadingClasses && classes && classes.length > 0 && (
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                  <tr>
+                    <th className="px-6 py-3 font-semibold">#</th>
+                    <th className="px-6 py-3 font-semibold">Name</th>
+                    <th className="px-6 py-3 font-semibold">Code</th>
+                    <th className="px-6 py-3 font-semibold">Category</th>
+                    <th className="px-6 py-3 font-semibold">Room</th>
+                    <th className="px-6 py-3 font-semibold">Class Teacher</th>
+                    <th className="px-6 py-3 font-semibold">Students</th>
+                    <th className="px-6 py-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {classes.map((c, index) => (
+                    <tr key={c.id}>
+                      <td className="px-6 py-3 text-slate-400">{index + 1}</td>
+                      <td className="px-6 py-3 text-slate-900">{titleCase(c.name)}</td>
+                      <td className="px-6 py-3 text-slate-500">{c.code}</td>
+                      <td className="px-6 py-3 text-slate-500">{CLASS_CATEGORY_LABELS[c.category]}</td>
+                      <td className="px-6 py-3 text-slate-500">{c.roomNumber ?? '—'}</td>
+                      <td className="px-6 py-3 text-slate-500">
+                        {c.formTeacher ? formatName(c.formTeacher.firstName, c.formTeacher.lastName) : '—'}
+                      </td>
+                      <td className="px-6 py-3 text-slate-500">{c.studentCount}</td>
+                      <td className="px-6 py-3">
+                        <div className="flex justify-between gap-3">
+                          <button
+                            onClick={() => openEditForm(c)}
+                            className="text-sm font-medium text-brand hover:underline"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(c)}
+                            disabled={deleteClass.isPending}
+                            className="text-sm  text-red-500 font-bold  hover:underline disabled:opacity-50"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
           <div className="mt-8 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-900">Terms</h2>
             <button
@@ -383,36 +383,6 @@ export function AcademicSetupPage() {
             >
               {showTermForm ? 'Cancel' : '+ Add term'}
             </button>
-          </div>
-
-          <div className="mt-4 overflow-hidden rounded-lg bg-white shadow">
-            {(!terms || terms.length === 0) && (
-              <p className="px-6 py-8 text-center text-sm text-slate-500">No terms set up yet.</p>
-            )}
-            {terms && terms.length > 0 && (
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold">#</th>
-                    <th className="px-6 py-3 font-semibold">Name</th>
-                    <th className="px-6 py-3 font-semibold">Start Date</th>
-                    <th className="px-6 py-3 font-semibold">End Date</th>
-                    <th className="px-6 py-3 font-semibold">Current</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {terms.map((t, index) => (
-                    <tr key={t.id}>
-                      <td className="px-6 py-3 text-slate-400">{index + 1}</td>
-                      <td className="px-6 py-3 text-slate-900">{t.name}</td>
-                      <td className="px-6 py-3 text-slate-500">{new Date(t.startDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-3 text-slate-500">{new Date(t.endDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-3 text-slate-500">{t.isCurrent ? 'Yes' : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
           </div>
 
           {showTermForm && (
@@ -477,6 +447,35 @@ export function AcademicSetupPage() {
             </div>
           )}
 
+          <div className="mt-4 overflow-hidden rounded-lg bg-white shadow">
+            {(!terms || terms.length === 0) && (
+              <p className="px-6 py-8 text-center text-sm text-slate-500">No terms set up yet.</p>
+            )}
+            {terms && terms.length > 0 && (
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                  <tr>
+                    <th className="px-6 py-3 font-semibold">#</th>
+                    <th className="px-6 py-3 font-semibold">Name</th>
+                    <th className="px-6 py-3 font-semibold">Start Date</th>
+                    <th className="px-6 py-3 font-semibold">End Date</th>
+                    <th className="px-6 py-3 font-semibold">Current</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {terms.map((t, index) => (
+                    <tr key={t.id}>
+                      <td className="px-6 py-3 text-slate-400">{index + 1}</td>
+                      <td className="px-6 py-3 text-slate-900">{t.name}</td>
+                      <td className="px-6 py-3 text-slate-500">{new Date(t.startDate).toLocaleDateString()}</td>
+                      <td className="px-6 py-3 text-slate-500">{new Date(t.endDate).toLocaleDateString()}</td>
+                      <td className="px-6 py-3 text-slate-500">{t.isCurrent ? 'Yes' : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
     </AppLayout>

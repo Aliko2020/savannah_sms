@@ -37,6 +37,7 @@ const CONFIG_NAV_ITEMS: NavItem[] = [
 const ASSESSMENT_NAV_ITEMS: NavItem[] = [
   { to: '/teachers/assessment/class', label: 'Class Assessment', icon: BookIcon, roles: ['TEACHER'] },
   { to: '/teachers/assessment/exam', label: 'Exam Assessment', icon: BookIcon, roles: ['TEACHER'] },
+  { to: '/teachers/assessment/view', label: 'View Assessment', icon: BookIcon, roles: ['TEACHER'] },
 ];
 
 function NavItemLink({ to, label, icon: Icon, onNavigate }: NavItem & { onNavigate?: () => void }) {

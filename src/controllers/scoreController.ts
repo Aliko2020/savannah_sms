@@ -118,7 +118,9 @@ export const saveScores = async (req: Request, res: Response): Promise<Response>
       scores.map((entry) => {
         const classScore = entry.classScore !== null && entry.classScore !== undefined ? Number(entry.classScore) : null;
         const examScore = entry.examScore !== null && entry.examScore !== undefined ? Number(entry.examScore) : null;
-        const total = classScore !== null && examScore !== null ? classScore * 0.4 + examScore * 0.6 : null;
+        // Show a running total as soon as either score is entered — missing
+        // half counts as 0 for now rather than hiding the mark that IS in.
+        const total = classScore !== null || examScore !== null ? (classScore ?? 0) * 0.4 + (examScore ?? 0) * 0.6 : null;
 
         return prisma.score.upsert({
           where: {

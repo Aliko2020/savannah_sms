@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AppLayout } from './AppLayout';
 import { PageHeader } from './PageHeader';
@@ -24,10 +23,12 @@ interface AssessmentEntryProps {
   scoreLabel: string;
 }
 
-// Teachers enter both scores on a raw 0-100 scale; the total weights them
-// down to a class:exam split of 40:60 out of 100.
+// Teachers enter both scores on a raw 0-100 scale; each page shows that
+// score weighted down to its own share of the final 100 (class:exam = 40:60).
 const CLASS_WEIGHT = 0.4;
 const EXAM_WEIGHT = 0.6;
+const WEIGHT = { class: CLASS_WEIGHT, exam: EXAM_WEIGHT } as const;
+const WEIGHTED_MAX = { class: 40, exam: 60 } as const;
 
 export function AssessmentEntry({ mode, title, scoreLabel }: AssessmentEntryProps) {
   const queryClient = useQueryClient();
@@ -126,17 +127,6 @@ export function AssessmentEntry({ mode, title, scoreLabel }: AssessmentEntryProp
     <AppLayout>
       <PageHeader title={title} icon={GraduationCapIcon} />
 
-      {mode === 'class' && (
-        <div className="mb-4 flex justify-end">
-          <Link
-            to="/teachers/assessment/view"
-            className="rounded bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-light"
-          >
-            View Class Assessment
-          </Link>
-        </div>
-      )}
-
       {loadingTeacher && <p className="text-sm text-slate-500">Loading…</p>}
 
       {!loadingTeacher && !assignedClass && (
@@ -144,8 +134,8 @@ export function AssessmentEntry({ mode, title, scoreLabel }: AssessmentEntryProp
       )}
 
       {!loadingTeacher && assignedClass && (
-        <div className="max-w-5xl">
-          <div className="mb-6 grid grid-cols-1 gap-4 rounded-lg bg-white p-6 shadow sm:grid-cols-2">
+        <div className="max-w-7xl">
+          <div className="mb-6 grid grid-cols-1 items-start gap-4 rounded-lg bg-white p-6 shadow md:grid-cols-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Class</label>
               <p className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
@@ -220,19 +210,14 @@ export function AssessmentEntry({ mode, title, scoreLabel }: AssessmentEntryProp
                           <th className="px-6 py-3 font-semibold">Admission No.</th>
                           <th className="px-6 py-3 font-semibold">Name</th>
                           <th className="px-6 py-3 font-semibold">{scoreLabel} (out of 100)</th>
-                          <th className="px-6 py-3 font-semibold">Total (out of 100)</th>
+                          <th className="px-6 py-3 font-semibold">Total (out of {WEIGHTED_MAX[mode]})</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {roster.map((s, index) => {
                           const draft = drafts[s.studentId] ?? { editable: '', fixed: null };
                           const editableVal = draft.editable === '' ? null : Number(draft.editable);
-                          const classRaw = mode === 'class' ? editableVal : draft.fixed;
-                          const examRaw = mode === 'exam' ? editableVal : draft.fixed;
-                          const total =
-                            classRaw !== null && examRaw !== null
-                              ? classRaw * CLASS_WEIGHT + examRaw * EXAM_WEIGHT
-                              : null;
+                          const total = editableVal !== null ? editableVal * WEIGHT[mode] : null;
 
                           return (
                             <tr key={s.studentId}>

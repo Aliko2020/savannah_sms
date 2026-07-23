@@ -214,10 +214,10 @@ model Class {
 }
 
 model Subject {
-  id       String        @id @default(uuid())
-  name     String        @unique // "Mathematics"
-  code     String        @unique // "MATH"
-  category ClassCategory @default(PRIMARY)
+  id         String          @id @default(uuid())
+  name       String          @unique // "Mathematics"
+  code       String          @unique // "MATH"
+  categories ClassCategory[] @default([PRIMARY]) // a subject can be taught across multiple class levels
 
   classSubjects ClassSubject[]
 

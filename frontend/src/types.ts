@@ -87,7 +87,7 @@ export interface Subject {
   id: string;
   name: string;
   code: string;
-  category: ClassCategory;
+  categories: ClassCategory[];
 }
 
 export interface ClassStudent {

@@ -24,13 +24,13 @@ export function SubjectSetupPage() {
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [category, setCategory] = useState<ClassCategory>('PRIMARY');
+  const [categories, setCategories] = useState<ClassCategory[]>(['PRIMARY']);
 
   function openAddForm() {
     setEditingSubject(null);
     setName('');
     setCode('');
-    setCategory('PRIMARY');
+    setCategories(['PRIMARY']);
     setShowForm(true);
   }
 
@@ -38,7 +38,7 @@ export function SubjectSetupPage() {
     setEditingSubject(s);
     setName(s.name);
     setCode(s.code);
-    setCategory(s.category);
+    setCategories(s.categories);
     setShowForm(true);
   }
 
@@ -47,9 +47,13 @@ export function SubjectSetupPage() {
     setEditingSubject(null);
   }
 
+  function toggleCategory(c: ClassCategory) {
+    setCategories((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
+  }
+
   const saveSubject = useMutation({
     mutationFn: () => {
-      const payload = { name, code, category };
+      const payload = { name, code, categories };
       return editingSubject
         ? apiFetch<Subject>(`/subjects/${editingSubject.id}`, { method: 'PATCH', body: JSON.stringify(payload) })
         : apiFetch<Subject>('/subjects', { method: 'POST', body: JSON.stringify(payload) });
@@ -96,55 +100,8 @@ export function SubjectSetupPage() {
           </button>
         </div>
 
-        <div className="overflow-hidden rounded-lg bg-white shadow">
-          {!isLoading && subjects && subjects.length === 0 && (
-            <p className="px-6 py-8 text-center text-sm text-slate-500">No subjects yet.</p>
-          )}
-
-          {!isLoading && subjects && subjects.length > 0 && (
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                <tr>
-                  <th className="px-6 py-3 font-semibold">#</th>
-                  <th className="px-6 py-3 font-semibold">Name</th>
-                  <th className="px-6 py-3 font-semibold">Code</th>
-                  <th className="px-6 py-3 font-semibold">Category</th>
-                  <th className="px-6 py-3 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {subjects.map((s, index) => (
-                  <tr key={s.id}>
-                    <td className="px-6 py-3 text-slate-400">{index + 1}</td>
-                    <td className="px-6 py-3 text-slate-900">{s.name}</td>
-                    <td className="px-6 py-3 text-slate-500">{s.code}</td>
-                    <td className="px-6 py-3 text-slate-500">{CLASS_CATEGORY_LABELS[s.category]}</td>
-                    <td className="px-6 py-3">
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => openEditForm(s)}
-                          className="text-sm font-medium text-brand hover:underline"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(s)}
-                          disabled={deleteSubject.isPending}
-                          className="text-sm font-bold text-red-500 hover:underline disabled:opacity-50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
         {showForm && (
-          <div className="mt-4 rounded-lg bg-white p-6 shadow">
+          <div className="mb-4 rounded-lg bg-white p-6 shadow">
             <h2 className="mb-4 text-sm font-semibold text-slate-900">
               {editingSubject ? `Edit ${editingSubject.name}` : 'Add subject'}
             </h2>
@@ -175,22 +132,29 @@ export function SubjectSetupPage() {
                 />
               </div>
               <div className="col-span-2">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Category</label>
-                <select
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as ClassCategory)}
-                >
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Category <span className="text-red-500">*</span>
+                </label>
+                <div className="flex flex-wrap gap-4">
                   {CLASS_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
+                    <label key={c} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={categories.includes(c)}
+                        onChange={() => toggleCategory(c)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
                       {CLASS_CATEGORY_LABELS[c]}
-                    </option>
+                    </label>
                   ))}
-                </select>
+                </div>
+                {categories.length === 0 && (
+                  <p className="mt-1 text-xs text-red-500">Select at least one category.</p>
+                )}
               </div>
               <button
                 type="submit"
-                disabled={saveSubject.isPending}
+                disabled={saveSubject.isPending || categories.length === 0}
                 className="col-span-2 max-w-32 rounded bg-brand py-2 text-sm font-medium text-white hover:bg-brand-light disabled:opacity-50"
               >
                 {saveSubject.isPending ? 'Saving…' : editingSubject ? 'Save changes' : 'Add subject'}
@@ -198,6 +162,55 @@ export function SubjectSetupPage() {
             </form>
           </div>
         )}
+
+        <div className="overflow-hidden rounded-lg bg-white shadow">
+          {!isLoading && subjects && subjects.length === 0 && (
+            <p className="px-6 py-8 text-center text-sm text-slate-500">No subjects yet.</p>
+          )}
+
+          {!isLoading && subjects && subjects.length > 0 && (
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="px-6 py-3 font-semibold">#</th>
+                  <th className="px-6 py-3 font-semibold">Name</th>
+                  <th className="px-6 py-3 font-semibold">Code</th>
+                  <th className="px-6 py-3 font-semibold">Category</th>
+                  <th className="px-6 py-3 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {subjects.map((s, index) => (
+                  <tr key={s.id}>
+                    <td className="px-6 py-3 text-slate-400">{index + 1}</td>
+                    <td className="px-6 py-3 text-slate-900">{s.name}</td>
+                    <td className="px-6 py-3 text-slate-500">{s.code}</td>
+                    <td className="px-6 py-3 text-slate-500">
+                      {s.categories.map((c) => CLASS_CATEGORY_LABELS[c]).join(', ')}
+                    </td>
+                    <td className="px-6 py-3">
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => openEditForm(s)}
+                          className="text-sm font-medium text-brand hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(s)}
+                          disabled={deleteSubject.isPending}
+                          className="text-sm font-bold text-red-500 hover:underline disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </AppLayout>
   );
