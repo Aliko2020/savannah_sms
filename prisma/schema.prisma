@@ -62,6 +62,30 @@ enum ContractType {
   TEMPORARY
 }
 
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  BANK_TRANSFER
+}
+
+enum PromotionStatus {
+  DRAFT // results computed, awaiting admin review
+  EXECUTED // enrollments committed
+}
+
+enum PromotionDecision {
+  PROMOTED
+  PROBATION
+  REPEATED
+  GRADUATED // terminal grade level (no promotesTo target)
+}
+
+enum SectionStrategy {
+  MAINTAIN_STREAM // "Grade 1A" -> "Grade 2A" by matching section letter/suffix
+  AUTO_DISTRIBUTE // balanced round-robin fill across target sections
+  UNASSIGNED_POOL // leave toClassId null; admin assigns manually later
+}
+
 // ============================================================================
 // USERS & AUTH
 // ============================================================================
@@ -83,8 +107,30 @@ model User {
 
   teacherProfile TeacherProfile?
   studentProfile StudentProfile?
+  paymentsRecorded Payment[]
+  otpCodes         OtpCode[]
+  promotionRunsCreated PromotionRun[]
 
   @@map("users")
+}
+
+// Short-lived, single-use SMS verification codes gating sensitive actions
+// (currently: recording a fee payment) — proves the person acting is really
+// the admin whose phone it went to, not just whoever is logged into that
+// browser session. `purpose` scopes a code to one specific action so a code
+// requested for one thing can't be reused for another.
+model OtpCode {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash   String
+  purpose    String
+  expiresAt  DateTime
+  consumedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("otp_codes")
 }
 
 model TeacherProfile {
@@ -118,10 +164,26 @@ model StudentProfile {
   dateOfBirth     DateTime @db.Date
   gender          Gender?
 
+  // When this student first joined the school — fees are only ever billed
+  // for terms on or after this term, so a mid-year admission is never
+  // charged for terms that predate them. Null means "no proration data"
+  // (pre-existing students migrated before this field existed), which bills
+  // in full, matching their historical behavior.
+  enrolmentTermId String?
+  enrolmentTerm   Term?    @relation("StudentEnrolmentTerm", fields: [enrolmentTermId], references: [id], onDelete: SetNull)
+  enrolmentDate   DateTime? @db.Date
+
+  // Manual admin override for debt that predates this system, e.g. a balance
+  // carried over from a transferred student's previous school. Added on top
+  // of the prorated fee, never replacing it.
+  openingBalance Decimal @default(0) @db.Decimal(10, 2)
+
   enrollments Enrollment[]
   attendance  Attendance[]
   scores      Score[]
   guardians   StudentGuardian[]
+  payments    Payment[]
+  promotionResults PromotionResult[]
 
   @@map("student_profiles")
 }
@@ -162,8 +224,11 @@ model AcademicYear {
   name      String  @unique // "2025/2026"
   isCurrent Boolean @default(false)
 
-  terms   Term[]
-  classes Class[]
+  terms    Term[]
+  classes  Class[]
+  payments Payment[]
+  promotionRunsFrom PromotionRun[] @relation("PromotionRunFrom")
+  promotionRunsTo   PromotionRun[] @relation("PromotionRunTo")
 
   @@map("academic_years")
 }
@@ -177,39 +242,76 @@ model Term {
   endDate        DateTime     @db.Date
   isCurrent      Boolean      @default(false)
 
-  scores     Score[]
-  attendance Attendance[]
+  scores        Score[]
+  attendance    Attendance[]
+  feeStructures FeeStructure[]
+
+  enrolledStudents StudentProfile[] @relation("StudentEnrolmentTerm")
 
   @@unique([academicYearId, name])
   @@map("terms")
 }
 
 // ============================================================================
+// GRADE LEVELS — the academic rung (Grade 1, JHS 3...), decoupled from any
+// specific academic year or section/stream. Promotion rules attach here,
+// not to individual Class rows, so "Grade 1 -> Grade 2" is defined once and
+// holds regardless of how many sections either grade has in a given year.
+// ============================================================================
+model GradeLevel {
+  id       String        @id @default(uuid())
+  name     String        @unique // "Grade 1", "JHS 3"
+  category ClassCategory
+  order    Int           @unique // sequencing for progression: 1, 2, 3...
+
+  classes Class[]
+
+  // Where this grade's students normally promote to. Null = terminal grade
+  // (e.g. JHS 3) — those students graduate rather than repeat or promote.
+  promotesToId String?
+  promotesTo   GradeLevel?  @relation("GradeProgression", fields: [promotesToId], references: [id], onDelete: SetNull)
+  promotedFrom GradeLevel[] @relation("GradeProgression")
+
+  promotionRule PromotionRule?
+
+  @@map("grade_levels")
+}
+
+// ============================================================================
 // ACADEMICS: HOMEROOM, SUBJECTS, TEACHING UNITS
 // ============================================================================
-// A Class is a homeroom for ONE academic year, e.g. "B7-GOLD" 2025/2026.
+// A Class is a homeroom/section for ONE academic year, e.g. "Grade 1A" 2025/2026.
 model Class {
   id         String        @id @default(uuid())
   name       String
   code       String        @unique // "B7-GOLD-2026"
-  category   ClassCategory @default(PRIMARY)
-  roomNumber String?
+  category   ClassCategory @default(PRIMARY) // denormalized from gradeLevel for query convenience
+
+  gradeLevelId String
+  gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
 
   academicYearId String
   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
 
   // Optional so a class can exist before a form teacher is assigned.
-  // Unique: a teacher can be the form teacher of at most one class.
-  formTeacherId String? @unique
+  // A teacher can be the form teacher of at most one class PER ACADEMIC
+  // YEAR (see the compound unique below) — not one class ever, otherwise a
+  // teacher who was a form teacher last year could never be assigned again
+  // once that academic year ends and its classes stick around as history.
+  formTeacherId String?
   formTeacher   TeacherProfile? @relation(fields: [formTeacherId], references: [id], onDelete: SetNull)
 
   enrollments   Enrollment[]
   attendance    Attendance[]
   classSubjects ClassSubject[]
 
+  promotionResultsAsSource PromotionResult[] @relation("PromotionSource")
+  promotionResultsAsTarget PromotionResult[] @relation("PromotionTarget")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([formTeacherId, academicYearId])
   @@map("classes")
 }
 
@@ -294,4 +396,144 @@ model Attendance {
 
   @@unique([studentId, date])
   @@map("attendance")
+}
+
+// ============================================================================
+// FEES
+// ============================================================================
+// Expected fee per class level per TERM. Same amount applies to every class
+// within a category (e.g. all Primary classes), not per individual class.
+// Billing is termly: a student's total expected fee is the sum of these
+// amounts across every term from their enrolment term through whichever
+// term is currently active — so an unpaid balance rolls forward and grows
+// as each new term starts, rather than a single flat amount for the year.
+model FeeStructure {
+  id       String        @id @default(uuid())
+  category ClassCategory
+  termId   String
+  term     Term          @relation(fields: [termId], references: [id], onDelete: Cascade)
+  amount   Decimal       @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([category, termId])
+  @@map("fee_structures")
+}
+
+// One row per transaction; balances are always derived by summing these,
+// never stored, so payment history is an append-only ledger.
+model Payment {
+  id             String         @id @default(uuid())
+  receiptNumber  String         @unique
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  academicYearId String
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  amount         Decimal        @db.Decimal(10, 2)
+  method         PaymentMethod
+  reference      String? // Bank Receipt / Ref No. printed on the pay-in slip, when method is BANK_TRANSFER
+  bankName       String? // e.g. "GCB Bank" — only meaningful for BANK_TRANSFER
+  branchOrChannel String? // branch name or digital channel, e.g. "Mobile App"
+  // The date the deposit was actually made at the bank — distinct from
+  // createdAt (when this row was entered into the system), since an admin
+  // may enter a receipt for a deposit made a day or two earlier.
+  paidAt         DateTime       @default(now()) @db.Date
+
+  recordedById String
+  recordedBy   User   @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@map("payments")
+}
+
+// ============================================================================
+// PROMOTION
+// ============================================================================
+// Configurable pass/fail thresholds. One row per GradeLevel, or a single
+// row with gradeLevelId null as the school-wide default when a grade has no
+// override of its own.
+model PromotionRule {
+  id           String      @id @default(uuid())
+  gradeLevelId String?     @unique
+  gradeLevel   GradeLevel? @relation(fields: [gradeLevelId], references: [id], onDelete: Cascade)
+
+  promoteMinAverage   Decimal @db.Decimal(5, 2) // average >= this -> PROMOTED
+  probationMinAverage Decimal @db.Decimal(5, 2) // average >= this (but < promote) -> PROBATION; below -> REPEATED
+
+  probationPromotes Boolean @default(true) // does PROBATION still move up a grade, flagged?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("promotion_rules")
+}
+
+// One promotion cycle, e.g. "end of 2026/2027 -> 2027/2028".
+model PromotionRun {
+  id String @id @default(uuid())
+
+  fromAcademicYearId String
+  fromAcademicYear   AcademicYear @relation("PromotionRunFrom", fields: [fromAcademicYearId], references: [id], onDelete: Restrict)
+  toAcademicYearId   String
+  toAcademicYear     AcademicYear @relation("PromotionRunTo", fields: [toAcademicYearId], references: [id], onDelete: Restrict)
+
+  status          PromotionStatus  @default(DRAFT)
+  sectionStrategy SectionStrategy?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  executedAt  DateTime?
+
+  results PromotionResult[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([fromAcademicYearId, toAcademicYearId])
+  @@map("promotion_runs")
+}
+
+// One row per student per run — the staging area (DRAFT) and audit trail
+// (once EXECUTED) of a promotion cycle.
+model PromotionResult {
+  id             String       @id @default(uuid())
+  promotionRunId String
+  promotionRun   PromotionRun @relation(fields: [promotionRunId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  fromClassId String
+  fromClass   Class  @relation("PromotionSource", fields: [fromClassId], references: [id], onDelete: Restrict)
+
+  cumulativeAverage  Decimal            @db.Decimal(5, 2)
+  decision           PromotionDecision
+  decisionOverridden Boolean            @default(false) // true once an admin changes the engine's suggestion
+
+  targetGradeLevelId String? // resolved from decision + GradeLevel.promotesToId
+  toClassId          String? // resolved at execution time (section routing)
+  toClass            Class?  @relation("PromotionTarget", fields: [toClassId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@unique([promotionRunId, studentId])
+  @@map("promotion_results")
+}
+
+// ============================================================================
+// SCHOOL SETTINGS — single-row global config (letterhead branding, etc.)
+// Always addressed by the fixed id "singleton"; the seed script creates the
+// one row and every read/write targets that same id, so there's never a
+// second row to reconcile.
+// ============================================================================
+model SchoolSettings {
+  id      String @id @default("singleton")
+  name    String
+  address String
+  phone   String
+
+  updatedAt DateTime @updatedAt
+
+  @@map("school_settings")
 }

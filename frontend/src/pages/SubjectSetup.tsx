@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { AppLayout } from '../components/AppLayout';
+import { BookOpen, Plus } from 'lucide-react';
+import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Checkbox } from '../components/ui/Checkbox';
 import { apiFetch, ApiError } from '../api/client';
-import { BookIcon } from '../components/icons';
-import { PageHeader } from '../components/PageHeader';
 import { CLASS_CATEGORIES, CLASS_CATEGORY_LABELS } from '../constants';
 import type { ClassCategory, Subject } from '../types';
 
@@ -75,6 +77,15 @@ export function SubjectSetupPage() {
     onError: (error) => toast.error(errorMessage(error, 'Could not delete subject.')),
   });
 
+  const loadStandardSubjects = useMutation({
+    mutationFn: () => apiFetch<{ message: string; count: number }>('/subjects/load-standard', { method: 'POST' }),
+    onSuccess: (data) => {
+      toast.success(data.count > 0 ? data.message : 'Already up to date — no new subjects to add.');
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Could not load standard subjects.')),
+  });
+
   function handleSave(e: FormEvent) {
     e.preventDefault();
     saveSubject.mutate();
@@ -87,90 +98,63 @@ export function SubjectSetupPage() {
   }
 
   return (
-    <AppLayout>
-      <PageHeader title="Subject Setup" icon={BookIcon} />
-
+    <DashboardLayout title="Subject Setup" icon={BookOpen}>
       <div className="max-w-3xl">
-        <div className="mb-4 flex items-center justify-end">
-          <button
-            onClick={() => (showForm ? closeForm() : openAddForm())}
-            className="rounded bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-light"
-          >
-            {showForm ? 'Cancel' : '+ Add subject'}
-          </button>
+        <div className="mb-4 flex items-center justify-end gap-3">
+          <Button variant="secondary" loading={loadStandardSubjects.isPending} onClick={() => loadStandardSubjects.mutate()}>
+            Load standard subjects
+          </Button>
+          <Button onClick={() => (showForm ? closeForm() : openAddForm())}>
+            {showForm ? 'Cancel' : (
+              <>
+                <Plus /> Add subject
+              </>
+            )}
+          </Button>
         </div>
 
         {showForm && (
-          <div className="mb-4 rounded-lg bg-white p-6 shadow">
-            <h2 className="mb-4 text-sm font-semibold text-slate-900">
+          <div className="mb-4 rounded-xl border border-border bg-surface p-6 shadow-sm">
+            <h2 className="mb-4 text-sm font-semibold text-zinc-900">
               {editingSubject ? `Edit ${editingSubject.name}` : 'Add subject'}
             </h2>
 
-            <form onSubmit={handleSave} className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="e.g. Mathematics"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Code <span className="text-red-500">*</span>
-                </label>
-                <input
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="e.g. MATH"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  required
-                />
-              </div>
+            <form onSubmit={handleSave} className="grid grid-cols-2 gap-4">
+              <Input label="Name" required placeholder="e.g. Mathematics" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input label="Code" required placeholder="e.g. MATH" value={code} onChange={(e) => setCode(e.target.value)} />
               <div className="col-span-2">
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Category <span className="text-red-500">*</span>
+                <label className="mb-1.5 block text-[13px] font-medium text-zinc-700">
+                  Category <span className="text-danger-600">*</span>
                 </label>
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap gap-5">
                   {CLASS_CATEGORIES.map((c) => (
-                    <label key={c} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={categories.includes(c)}
-                        onChange={() => toggleCategory(c)}
-                        className="h-4 w-4 rounded border-slate-300"
-                      />
-                      {CLASS_CATEGORY_LABELS[c]}
-                    </label>
+                    <Checkbox
+                      key={c}
+                      checked={categories.includes(c)}
+                      onCheckedChange={() => toggleCategory(c)}
+                      label={CLASS_CATEGORY_LABELS[c]}
+                    />
                   ))}
                 </div>
                 {categories.length === 0 && (
-                  <p className="mt-1 text-xs text-red-500">Select at least one category.</p>
+                  <p className="mt-1.5 text-xs text-danger-600">Select at least one category.</p>
                 )}
               </div>
-              <button
-                type="submit"
-                disabled={saveSubject.isPending || categories.length === 0}
-                className="col-span-2 max-w-32 rounded bg-brand py-2 text-sm font-medium text-white hover:bg-brand-light disabled:opacity-50"
-              >
-                {saveSubject.isPending ? 'Saving…' : editingSubject ? 'Save changes' : 'Add subject'}
-              </button>
+              <Button type="submit" loading={saveSubject.isPending} disabled={categories.length === 0} className="col-span-2 max-w-40">
+                {editingSubject ? 'Save changes' : 'Add subject'}
+              </Button>
             </form>
           </div>
         )}
 
-        <div className="overflow-hidden rounded-lg bg-white shadow">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
           {!isLoading && subjects && subjects.length === 0 && (
-            <p className="px-6 py-8 text-center text-sm text-slate-500">No subjects yet.</p>
+            <p className="px-6 py-8 text-center text-sm text-zinc-500">No subjects yet.</p>
           )}
 
           {!isLoading && subjects && subjects.length > 0 && (
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+              <thead className="border-b border-border text-[11px] uppercase tracking-wide text-zinc-400">
                 <tr>
                   <th className="px-6 py-3 font-semibold">#</th>
                   <th className="px-6 py-3 font-semibold">Name</th>
@@ -179,30 +163,29 @@ export function SubjectSetupPage() {
                   <th className="px-6 py-3 font-semibold">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {subjects.map((s, index) => (
-                  <tr key={s.id}>
-                    <td className="px-6 py-3 text-slate-400">{index + 1}</td>
-                    <td className="px-6 py-3 text-slate-900">{s.name}</td>
-                    <td className="px-6 py-3 text-slate-500">{s.code}</td>
-                    <td className="px-6 py-3 text-slate-500">
+                  <tr key={s.id} className="transition-colors hover:bg-zinc-50">
+                    <td className="px-6 py-3 tabular-nums text-zinc-400">{index + 1}</td>
+                    <td className="px-6 py-3 text-zinc-900">{s.name}</td>
+                    <td className="px-6 py-3 text-zinc-500">{s.code}</td>
+                    <td className="px-6 py-3 text-zinc-500">
                       {s.categories.map((c) => CLASS_CATEGORY_LABELS[c]).join(', ')}
                     </td>
                     <td className="px-6 py-3">
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => openEditForm(s)}
-                          className="text-sm font-medium text-brand hover:underline"
-                        >
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => openEditForm(s)}>
                           Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(s)}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger-600 hover:bg-danger-50 hover:text-danger-700"
                           disabled={deleteSubject.isPending}
-                          className="text-sm font-bold text-red-500 hover:underline disabled:opacity-50"
+                          onClick={() => handleDelete(s)}
                         >
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -212,6 +195,6 @@ export function SubjectSetupPage() {
           )}
         </div>
       </div>
-    </AppLayout>
+    </DashboardLayout>
   );
 }

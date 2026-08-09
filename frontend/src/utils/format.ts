@@ -11,3 +11,7 @@ export function titleCase(value: string): string {
 export function formatName(firstName: string, lastName: string): string {
   return `${titleCase(firstName)} ${titleCase(lastName)}`;
 }
+
+export function formatCurrency(amount: number): string {
+  return `GHS ${amount.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}

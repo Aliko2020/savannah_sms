@@ -4,6 +4,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import bcrypt from "bcrypt";
+import { ensureStandardSubjects } from "../src/services/subjectSeedService";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -33,26 +34,40 @@ async function main() {
 
   if (existingAdmin) {
     console.log("Admin account already exists. Skipping creation.");
-    return;
+  } else {
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+    const admin = await prisma.user.create({
+      data: {
+        username: adminIdentifier,
+        email: "admin@savannasms.com",
+        password: hashedPassword,
+        role: "SUPER_ADMIN",
+        firstName: "Director",
+        lastName: "",
+        isActive: true,
+      },
+    });
+
+    console.log("Super Admin created successfully!");
+    console.log(`Username/Phone: ${admin.username}`);
+    console.log(`Password: ${adminPassword}`);
   }
 
-  const hashedPassword = await bcrypt.hash(adminPassword, 10);
+  const subjectCount = await ensureStandardSubjects(prisma);
+  console.log(`Standard subjects: ${subjectCount} added.`);
 
-  const admin = await prisma.user.create({
-    data: {
-      username: adminIdentifier,
-      email: "admin@savannasms.com",
-      password: hashedPassword,
-      role: "SUPER_ADMIN",
-      firstName: "System",
-      lastName: "Administrator",
-      isActive: true,
+  await prisma.schoolSettings.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: {
+      id: "singleton",
+      name: "WALLER ACADEMY",
+      address: "POST OFFICE BOX 47, YIKENE-BOLGATANGA",
+      phone: "0246787576 / 0244124636",
     },
   });
-
-  console.log("Super Admin created successfully!");
-  console.log(`Username/Phone: ${admin.username}`);
-  console.log(`Password: ${adminPassword}`);
+  console.log("School settings ready (editable from School Settings in the app).");
 }
 
 main()

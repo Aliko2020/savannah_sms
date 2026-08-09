@@ -21,12 +21,38 @@ async function assertCanEnterScores(req: Request, classSubjectId: string): Promi
   return null;
 }
 
+type TermResolution = { termId: string } | { error: string; status: number };
+
+// Teachers never choose a term client-side — the UI locks to whatever term is
+// currently active, and the server ignores any termId a teacher's request
+// might carry and resolves it fresh from the DB. This is what actually stops
+// a tampered payload from writing scores into a historical term: there is
+// nothing for a teacher to tamper with, since their termId is never trusted.
+// Admins/Super Admins are the documented override — they may target any term
+// explicitly (e.g. to correct a closed term), so their termId is trusted.
+async function resolveTermId(req: Request, requestedTermId?: string): Promise<TermResolution> {
+  const isStaff = req.user?.role === 'ADMIN' || req.user?.role === 'SUPER_ADMIN';
+
+  if (isStaff) {
+    if (!requestedTermId) {
+      return { error: 'termId is required.', status: 400 };
+    }
+    return { termId: requestedTermId };
+  }
+
+  const current = await prisma.term.findFirst({ where: { isCurrent: true }, select: { id: true } });
+  if (!current) {
+    return { error: 'No active term has been set. Ask an administrator to activate a term.', status: 409 };
+  }
+  return { termId: current.id };
+}
+
 // Roster for a class subject + term, with any existing score merged in.
 export const listScores = async (req: Request, res: Response): Promise<Response> => {
   const { classSubjectId, termId } = req.query;
 
-  if (!classSubjectId || !termId) {
-    return res.status(400).json({ error: 'classSubjectId and termId are required.' });
+  if (!classSubjectId) {
+    return res.status(400).json({ error: 'classSubjectId is required.' });
   }
 
   const permissionError = await assertCanEnterScores(req, String(classSubjectId));
@@ -34,6 +60,12 @@ export const listScores = async (req: Request, res: Response): Promise<Response>
     const status = permissionError === 'Class subject not found.' ? 404 : 403;
     return res.status(status).json({ error: permissionError });
   }
+
+  const termResolution = await resolveTermId(req, termId ? String(termId) : undefined);
+  if ('error' in termResolution) {
+    return res.status(termResolution.status).json({ error: termResolution.error });
+  }
+  const resolvedTermId = termResolution.termId;
 
   const classSubject = await prisma.classSubject.findUnique({
     where: { id: String(classSubjectId) },
@@ -49,7 +81,7 @@ export const listScores = async (req: Request, res: Response): Promise<Response>
           admissionNumber: true,
           user: { select: { firstName: true, otherName: true, lastName: true } },
           scores: {
-            where: { classSubjectId: String(classSubjectId), termId: String(termId) },
+            where: { classSubjectId: String(classSubjectId), termId: resolvedTermId },
             select: { classScore: true, examScore: true, total: true, grade: true, remark: true },
           },
         },
@@ -58,8 +90,9 @@ export const listScores = async (req: Request, res: Response): Promise<Response>
     orderBy: { student: { user: { firstName: 'asc' } } },
   });
 
-  return res.status(200).json(
-    enrollments.map((e) => {
+  return res.status(200).json({
+    termId: resolvedTermId,
+    students: enrollments.map((e) => {
       const score = e.student.scores[0];
       return {
         studentId: e.student.id,
@@ -75,7 +108,7 @@ export const listScores = async (req: Request, res: Response): Promise<Response>
         remark: score?.remark ?? null,
       };
     }),
-  );
+  });
 };
 
 interface ScoreEntry {
@@ -92,8 +125,8 @@ export const saveScores = async (req: Request, res: Response): Promise<Response>
     scores?: ScoreEntry[];
   };
 
-  if (!classSubjectId || !termId || !Array.isArray(scores)) {
-    return res.status(400).json({ error: 'classSubjectId, termId, and scores[] are required.' });
+  if (!classSubjectId || !Array.isArray(scores)) {
+    return res.status(400).json({ error: 'classSubjectId and scores[] are required.' });
   }
 
   const permissionError = await assertCanEnterScores(req, classSubjectId);
@@ -101,6 +134,12 @@ export const saveScores = async (req: Request, res: Response): Promise<Response>
     const status = permissionError === 'Class subject not found.' ? 404 : 403;
     return res.status(status).json({ error: permissionError });
   }
+
+  const termResolution = await resolveTermId(req, termId);
+  if ('error' in termResolution) {
+    return res.status(termResolution.status).json({ error: termResolution.error });
+  }
+  const resolvedTermId = termResolution.termId;
 
   // Teachers enter both class and exam scores on a raw 0-100 scale; the total
   // is where they get weighted down to a class:exam split of 40:60 out of 100.
@@ -127,13 +166,13 @@ export const saveScores = async (req: Request, res: Response): Promise<Response>
             studentId_classSubjectId_termId: {
               studentId: entry.studentId,
               classSubjectId,
-              termId,
+              termId: resolvedTermId,
             },
           },
           create: {
             studentId: entry.studentId,
             classSubjectId,
-            termId,
+            termId: resolvedTermId,
             classScore,
             examScore,
             total,
@@ -149,7 +188,7 @@ export const saveScores = async (req: Request, res: Response): Promise<Response>
       }),
     );
 
-    return res.status(200).json({ message: 'Scores saved.', count: saved.length });
+    return res.status(200).json({ message: 'Scores saved.', count: saved.length, termId: resolvedTermId });
   } catch (error: any) {
     if (error.code === 'P2003') {
       return res.status(400).json({ error: 'One of the students, class subject, or term does not exist.' });

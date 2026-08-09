@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AppLayout } from '../components/AppLayout';
-import { PageHeader } from '../components/PageHeader';
+import { useNavigate } from 'react-router-dom';
+import { LayoutDashboard } from 'lucide-react';
+import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { StatCard } from '../components/StatCard';
 import { PopulationDetail } from '../components/PopulationDetail';
 import { StaffDetail } from '../components/StaffDetail';
 import { apiFetch } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { BriefcaseIcon, CashIcon, GraduationCapIcon, LaptopIcon, UserIcon, UserPlusIcon } from '../components/icons';
+import { BriefcaseIcon, CashIcon, UserIcon } from '../components/icons';
+import { formatCurrency } from '../utils/format';
 import type { DashboardStats } from '../types';
 
 type DetailCard = 'population' | 'staff';
@@ -19,6 +21,7 @@ const PANEL_TITLES: Record<DetailCard, string> = {
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isTeacher = user?.role === 'TEACHER';
   const [selectedCard, setSelectedCard] = useState<DetailCard | null>(null);
 
@@ -32,15 +35,14 @@ export function DashboardPage() {
   }
 
   return (
-    <AppLayout>
-      <PageHeader title="Dashboard" icon={LaptopIcon} />
+    <DashboardLayout title="Dashboard" icon={LayoutDashboard}>
       {!isLoading && stats && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             icon={UserIcon}
             value={stats.population.total}
             label={isTeacher ? 'Total Students' : 'Population'}
-            colorClassName="bg-stat-population"
+            colorKey="stat-population"
             subtext={`${stats.population.boys} boys · ${stats.population.girls} girls`}
             onClick={isTeacher ? undefined : () => toggleCard('population')}
           />
@@ -49,7 +51,7 @@ export function DashboardPage() {
               icon={BriefcaseIcon}
               value={stats.staff.total}
               label="Total Staff"
-              colorClassName="bg-stat-staff"
+              colorKey="stat-staff"
               subtext={`${stats.staff.teaching} teaching · ${stats.staff.nonTeaching} non-teaching`}
               onClick={() => toggleCard('staff')}
             />
@@ -57,41 +59,47 @@ export function DashboardPage() {
           {stats.fees && (
             <StatCard
               icon={CashIcon}
-              value={stats.fees.totalCollected}
-              label="Fees"
-              colorClassName="bg-stat-fees"
-              subtext={`${stats.fees.totalDebtors} debtors`}
+              value={formatCurrency(stats.fees.totalExpected)}
+              label="Total Expected Revenue"
+              colorKey="stat-fees"
+              subtext="All academic years, all terms"
+              onClick={() => navigate('/fees')}
             />
           )}
-          {stats.newEnrollments !== undefined && (
+          {stats.fees && (
+            <StatCard
+              icon={CashIcon}
+              value={formatCurrency(stats.fees.totalCollected)}
+              label="Fees Collected"
+              colorKey="stat-fees"
+              subtext={
+                stats.fees.termName
+                  ? `${stats.fees.totalDebtors} debtors (${stats.fees.termName})`
+                  : `${stats.fees.totalDebtors} debtors`
+              }
+              onClick={() => navigate('/fees?tab=log')}
+            />
+          )}
+          {/* {stats.newEnrollments !== undefined && (
             <StatCard
               icon={UserPlusIcon}
               value={stats.newEnrollments}
               label="New Enrollment"
-              colorClassName="bg-stat-enrollment"
+              colorKey="stat-enrollment"
               subtext="last 12 months"
             />
-          )}
-          {stats.classrooms && (
-            <StatCard
-              icon={GraduationCapIcon}
-              value={stats.classrooms.total}
-              label="Total Classrooms"
-              colorClassName="bg-stat-classrooms"
-              subtext={`${stats.classrooms.preSchool} pre-school · ${stats.classrooms.primary} primary · ${stats.classrooms.jhs} JHS`}
-            />
-          )}
+          )} */}
         </div>
       )}
 
       {selectedCard && (
-        <div className="mt-6 rounded-lg bg-white p-6 shadow">
+        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">{PANEL_TITLES[selectedCard]}</h2>
+            <h2 className="text-base font-semibold text-slate-900">{PANEL_TITLES[selectedCard]}</h2>
             <button
               type="button"
               onClick={() => setSelectedCard(null)}
-              className="text-slate-400 hover:text-slate-600"
+              className="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
               aria-label="Close"
             >
               ✕
@@ -101,6 +109,6 @@ export function DashboardPage() {
           {selectedCard === 'staff' && <StaffDetail />}
         </div>
       )}
-    </AppLayout>
+    </DashboardLayout>
   );
 }

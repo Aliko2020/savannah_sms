@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 import { ClassCategory } from '../generated/prisma/client';
+import { ensureStandardSubjects } from '../services/subjectSeedService';
 
 export const listSubjects = async (req: Request, res: Response): Promise<Response> => {
   const { category } = req.query;
@@ -72,6 +73,18 @@ export const updateSubject = async (req: Request, res: Response): Promise<Respon
     }
     console.error('Update Subject Error:', error);
     return res.status(500).json({ error: 'Internal server error while updating subject.' });
+  }
+};
+
+// Additive only — creates whichever standard NaCCA subjects are missing
+// (matched by code) and leaves existing subjects untouched. Safe to re-run.
+export const loadStandardSubjects = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const count = await ensureStandardSubjects(prisma);
+    return res.status(200).json({ message: `${count} standard subject(s) added.`, count });
+  } catch (error) {
+    console.error('Load Standard Subjects Error:', error);
+    return res.status(500).json({ error: 'Internal server error while loading standard subjects.' });
   }
 };
 

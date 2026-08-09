@@ -111,6 +111,30 @@ export const createClassSubject = async (req: Request, res: Response): Promise<R
   }
 };
 
+export const updateClassSubject = async (req: Request, res: Response): Promise<Response> => {
+  const id = String(req.params.id);
+  const { teacherId } = req.body;
+
+  try {
+    const classSubject = await prisma.classSubject.update({
+      where: { id },
+      data: { teacherId: teacherId || null },
+      include: classSubjectInclude,
+    });
+
+    return res.status(200).json(shapeClassSubject(classSubject));
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Assignment not found.' });
+    }
+    if (error.code === 'P2003') {
+      return res.status(400).json({ error: 'That teacher does not exist.' });
+    }
+    console.error('Update Class Subject Error:', error);
+    return res.status(500).json({ error: 'Internal server error while updating assignment.' });
+  }
+};
+
 export const deleteClassSubject = async (req: Request, res: Response): Promise<Response> => {
   const id = String(req.params.id);
 

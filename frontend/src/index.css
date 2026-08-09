@@ -1,12 +1,176 @@
 @import "tailwindcss";
 
+/* Dark mode is opt-in via a `data-theme="dark"` attribute (set by an
+ * in-app toggle), not the OS preference — there is no toggle built yet, and
+ * no page besides the base form controls (Button/Input/Select/Checkbox) has
+ * dark-mode styling, so following the OS automatically left those controls
+ * rendering dark while everything around them stayed light. Until a real
+ * toggle + full dark-mode pass exists, this keeps the app consistently
+ * light regardless of the visitor's OS theme. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
+  /* ---------------------------------------------------------------------
+   * Brand — the existing navy carries forward as the primary accent so
+   * the redesign reads as a refinement of SavannaSMS, not a rebrand.
+   * ------------------------------------------------------------------- */
   --color-brand: #0a0a23;
   --color-brand-light: #16163f;
 
+  --color-primary-50: #eef0ff;
+  --color-primary-100: #e0e3ff;
+  --color-primary-200: #c3c8ff;
+  --color-primary-300: #9ba3fb;
+  --color-primary-400: #6f78ec;
+  --color-primary-500: #4750d6;
+  --color-primary-600: #2f36b0;
+  --color-primary-700: #21266f;
+  --color-primary-800: #16163f;
+  --color-primary-900: #0a0a23;
+  --color-primary-950: #05051433;
+
+  /* ---------------------------------------------------------------------
+   * Neutrals — zinc rather than slate: slightly warmer, reads closer to
+   * Linear/Vercel than the cooler default slate scale.
+   * ------------------------------------------------------------------- */
+  --color-canvas: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-border: #e4e4e7;
+  --color-border-strong: #d4d4d8;
+
+  --color-canvas-dark: #09090b;
+  --color-surface-dark: #111113;
+  --color-surface-raised-dark: #18181b;
+  --color-border-dark: #27272a;
+  --color-border-strong-dark: #3f3f46;
+
+  /* ---------------------------------------------------------------------
+   * Semantic status colors — separate from the brand accent, used for
+   * pills, banners, and inline validation states.
+   * ------------------------------------------------------------------- */
+  --color-success-50: #f0fdf5;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  --color-danger-50: #fef2f2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  --color-info-50: #eff6ff;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+
+  /* Legacy stat-card tints kept so existing Dashboard cards don't break
+     while pages migrate to the new system one at a time. */
   --color-stat-population: #4f819a;
   --color-stat-staff: #c9ab7f;
   --color-stat-fees: #131a2c;
   --color-stat-enrollment: #23b881;
   --color-stat-classrooms: #7c6fdb;
+
+  /* ---------------------------------------------------------------------
+   * Radius — one consistent scale, used instead of ad-hoc rounded-* picks.
+   * ------------------------------------------------------------------- */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* ---------------------------------------------------------------------
+   * Shadows — layered, low-opacity. Named to match Tailwind's shadow-*
+   * utility suffixes so `shadow-xs` / `shadow-sm` resolve to these.
+   * ------------------------------------------------------------------- */
+  --shadow-color: 220 20% 10%;
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.04);
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.05), 0 1px 6px -2px hsl(var(--shadow-color) / 0.06);
+  --shadow-md: 0 4px 10px -2px hsl(var(--shadow-color) / 0.08), 0 2px 4px -2px hsl(var(--shadow-color) / 0.05);
+  --shadow-lg: 0 12px 24px -6px hsl(var(--shadow-color) / 0.12), 0 4px 8px -4px hsl(var(--shadow-color) / 0.06);
+  --shadow-focus-primary: 0 0 0 3.5px var(--color-primary-100);
+  --shadow-focus-danger: 0 0 0 3.5px var(--color-danger-50);
+
+  /* ---------------------------------------------------------------------
+   * Motion — one easing curve and duration scale reused by every
+   * interactive surface (buttons, inputs, menus, tooltips).
+   * ------------------------------------------------------------------- */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 260ms;
+
+  /* Typography */
+  --font-sans:
+    "Inter var", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono:
+    "SF Mono", "Cascadia Code", Consolas, "Liberation Mono", monospace;
+}
+
+@layer base {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  ::selection {
+    background: var(--color-primary-200);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.7s ease-out both;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-overlay-in {
+  animation: overlay-in var(--duration-base) var(--ease-out-quart) both;
+}
+
+.animate-content-in {
+  animation: content-in var(--duration-base) var(--ease-out-quart) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-overlay-in,
+  .animate-content-in {
+    animation: none;
+  }
 }

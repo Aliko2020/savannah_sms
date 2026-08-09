@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 import { createUserAccount } from '../services/userService';
 import { ContractType, Department, EmploymentStatus, GuardianRelation, Role } from '../generated/prisma/client';
+import { normalizeGhanaPhone } from '../utils/phone';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const listUsers = async (req: Request, res: Response): Promise<Response> => {
   const { role } = req.query;
@@ -31,24 +34,17 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
     return res.status(400).json({ error: "Invalid role." });
   }
 
-  // Admins can enroll teachers/students but cannot create other admin-level
-  // accounts — only a Super Admin can create an Admin (or, once, itself).
-  if (req.user?.role === 'ADMIN' && (role === 'ADMIN' || role === 'SUPER_ADMIN')) {
-    return res.status(403).json({ error: "Admins cannot create Admin or Super Admin accounts." });
+  // Admin accounts are provisioned once, at initial setup (via the seed
+  // script), not through the running app — this endpoint only creates
+  // TEACHER/STUDENT accounts from here on.
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+    return res.status(403).json({ error: "Admin accounts can only be created during initial setup." });
   }
 
-  if (role === 'SUPER_ADMIN') {
-    const existingSuperAdmin = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' } });
-    if (existingSuperAdmin) {
-      return res.status(400).json({ error: "A Super Admin account already exists. Only one is allowed." });
-    }
-  }
-
-  // STUDENT/TEACHER get an auto-generated username + password; ADMIN/SUPER_ADMIN
-  // still choose their own since those are typically set up deliberately, not in bulk.
-  const autoGenerateCredentials = role === 'STUDENT' || role === 'TEACHER';
-  if (!autoGenerateCredentials && (!username || !password)) {
-    return res.status(400).json({ error: "Missing required fields." });
+  // STUDENT/TEACHER — the only roles this endpoint can create — always get
+  // auto-generated credentials rather than a chosen username/password.
+  if (role !== 'STUDENT' && role !== 'TEACHER') {
+    return res.status(400).json({ error: "Invalid role." });
   }
 
   if (role === 'STUDENT' && !profileData?.classId) {
@@ -57,6 +53,31 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
 
   if (role === 'TEACHER' && !profileData?.phone) {
     return res.status(400).json({ error: "A phone number is required to add a teacher." });
+  }
+
+  if (email && !EMAIL_PATTERN.test(email)) {
+    return res.status(400).json({ error: "Invalid email address." });
+  }
+
+  const normalizedPhone = role === 'TEACHER' && profileData?.phone ? normalizeGhanaPhone(profileData.phone) : undefined;
+  if (role === 'TEACHER' && profileData?.phone && !normalizedPhone) {
+    return res.status(400).json({ error: "Invalid phone number. Use a 10-digit Ghanaian number, e.g. 0501234567." });
+  }
+
+  const normalizedGuardianPhone =
+    role === 'STUDENT' && profileData?.guardianPhone ? normalizeGhanaPhone(profileData.guardianPhone) : undefined;
+  if (role === 'STUDENT' && profileData?.guardianPhone && !normalizedGuardianPhone) {
+    return res.status(400).json({ error: "Invalid guardian phone number. Use a 10-digit Ghanaian number, e.g. 0501234567." });
+  }
+
+  const normalizedGuardianAltPhone =
+    role === 'STUDENT' && profileData?.guardianAlternatePhone
+      ? normalizeGhanaPhone(profileData.guardianAlternatePhone)
+      : undefined;
+  if (role === 'STUDENT' && profileData?.guardianAlternatePhone && !normalizedGuardianAltPhone) {
+    return res
+      .status(400)
+      .json({ error: "Invalid guardian alternate phone number. Use a 10-digit Ghanaian number, e.g. 0501234567." });
   }
 
   if (role === 'TEACHER' && !profileData?.department) {
@@ -91,6 +112,14 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
     return res.status(400).json({ error: "Invalid guardian relationship." });
   }
 
+  if (
+    role === 'STUDENT' &&
+    profileData?.openingBalance !== undefined &&
+    (!Number.isFinite(Number(profileData.openingBalance)) || Number(profileData.openingBalance) < 0)
+  ) {
+    return res.status(400).json({ error: "openingBalance must be a non-negative number." });
+  }
+
   try {
     const { user, admissionNumber, employeeId, generatedPassword } = await createUserAccount({
       username,
@@ -100,7 +129,14 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
       otherName,
       lastName,
       role,
-      profileData,
+      profileData: profileData
+        ? {
+            ...profileData,
+            ...(normalizedPhone ? { phone: normalizedPhone } : {}),
+            ...(normalizedGuardianPhone ? { guardianPhone: normalizedGuardianPhone } : {}),
+            ...(normalizedGuardianAltPhone ? { guardianAlternatePhone: normalizedGuardianAltPhone } : {}),
+          }
+        : profileData,
     });
 
     return res.status(201).json({

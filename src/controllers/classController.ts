@@ -7,8 +7,9 @@ function shapeClass(c: {
   name: string;
   code: string;
   category: ClassCategory;
-  roomNumber: string | null;
   academicYearId: string;
+  gradeLevelId: string;
+  gradeLevel?: { id: string; name: string; order: number } | null;
   formTeacher: { id: string; user: { firstName: string; lastName: string } } | null;
   _count: { enrollments: number };
 }) {
@@ -17,8 +18,9 @@ function shapeClass(c: {
     name: c.name,
     code: c.code,
     category: c.category,
-    roomNumber: c.roomNumber,
     academicYearId: c.academicYearId,
+    gradeLevelId: c.gradeLevelId,
+    gradeLevel: c.gradeLevel ?? null,
     formTeacher: c.formTeacher
       ? { id: c.formTeacher.id, firstName: c.formTeacher.user.firstName, lastName: c.formTeacher.user.lastName }
       : null,
@@ -36,6 +38,7 @@ export const listClasses = async (req: Request, res: Response): Promise<Response
     },
     include: {
       formTeacher: { include: { user: { select: { firstName: true, lastName: true } } } },
+      gradeLevel: { select: { id: true, name: true, order: true } },
       _count: { select: { enrollments: true } },
     },
     // Category enum is declared PRE_SCHOOL, PRIMARY, JHS — ascending order matches that.
@@ -45,19 +48,23 @@ export const listClasses = async (req: Request, res: Response): Promise<Response
   return res.status(200).json(classes.map(shapeClass));
 };
 
-async function assertTeacherUnassigned(formTeacherId: string, excludeClassId?: string): Promise<string | null> {
+// Scoped to the academic year — a teacher can be the form teacher of at
+// most one class per year, not one class ever, so they're free to be
+// assigned again once a new academic year's classes exist even if they're
+// still listed against last year's (now-historical) class.
+async function assertTeacherUnassigned(formTeacherId: string, academicYearId: string, excludeClassId?: string): Promise<string | null> {
   const conflict = await prisma.class.findFirst({
-    where: { formTeacherId, ...(excludeClassId ? { id: { not: excludeClassId } } : {}) },
+    where: { formTeacherId, academicYearId, ...(excludeClassId ? { id: { not: excludeClassId } } : {}) },
     select: { name: true },
   });
-  return conflict ? `This teacher is already the class teacher of "${conflict.name}". Unassign them there first.` : null;
+  return conflict ? `This teacher is already the class teacher of "${conflict.name}" this academic year. Unassign them there first.` : null;
 }
 
 export const createClass = async (req: Request, res: Response): Promise<Response> => {
-  const { name, code, category, roomNumber, academicYearId, formTeacherId } = req.body;
+  const { name, code, category, academicYearId, formTeacherId, gradeLevelId } = req.body;
 
-  if (!name || !code || !category || !academicYearId) {
-    return res.status(400).json({ error: 'name, code, category, and academicYearId are required.' });
+  if (!name || !code || !category || !academicYearId || !gradeLevelId) {
+    return res.status(400).json({ error: 'name, code, category, academicYearId, and gradeLevelId are required.' });
   }
 
   if (!Object.values(ClassCategory).includes(category)) {
@@ -65,7 +72,7 @@ export const createClass = async (req: Request, res: Response): Promise<Response
   }
 
   if (formTeacherId) {
-    const conflictMessage = await assertTeacherUnassigned(formTeacherId);
+    const conflictMessage = await assertTeacherUnassigned(formTeacherId, academicYearId);
     if (conflictMessage) {
       return res.status(400).json({ error: conflictMessage });
     }
@@ -77,12 +84,13 @@ export const createClass = async (req: Request, res: Response): Promise<Response
         name,
         code,
         category,
-        roomNumber: roomNumber || null,
         academicYearId,
+        gradeLevelId,
         formTeacherId: formTeacherId || null,
       },
       include: {
         formTeacher: { include: { user: { select: { firstName: true, lastName: true } } } },
+        gradeLevel: { select: { id: true, name: true, order: true } },
         _count: { select: { enrollments: true } },
       },
     });
@@ -96,7 +104,7 @@ export const createClass = async (req: Request, res: Response): Promise<Response
       return res.status(400).json({ error: 'A class with this code already exists.' });
     }
     if (error.code === 'P2003') {
-      return res.status(400).json({ error: 'That academic year or teacher does not exist.' });
+      return res.status(400).json({ error: 'That academic year, grade level, or teacher does not exist.' });
     }
     console.error('Create Class Error:', error);
     return res.status(500).json({ error: 'Internal server error while creating class.' });
@@ -105,14 +113,18 @@ export const createClass = async (req: Request, res: Response): Promise<Response
 
 export const updateClass = async (req: Request, res: Response): Promise<Response> => {
   const id = String(req.params.id);
-  const { name, code, category, roomNumber, formTeacherId } = req.body;
+  const { name, code, category, formTeacherId, gradeLevelId } = req.body;
 
   if (category && !Object.values(ClassCategory).includes(category)) {
     return res.status(400).json({ error: 'Invalid category.' });
   }
 
   if (formTeacherId) {
-    const conflictMessage = await assertTeacherUnassigned(formTeacherId, id);
+    const existing = await prisma.class.findUnique({ where: { id }, select: { academicYearId: true } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Class not found.' });
+    }
+    const conflictMessage = await assertTeacherUnassigned(formTeacherId, existing.academicYearId, id);
     if (conflictMessage) {
       return res.status(400).json({ error: conflictMessage });
     }
@@ -125,11 +137,12 @@ export const updateClass = async (req: Request, res: Response): Promise<Response
         ...(name !== undefined ? { name } : {}),
         ...(code !== undefined ? { code } : {}),
         ...(category !== undefined ? { category } : {}),
-        ...(roomNumber !== undefined ? { roomNumber: roomNumber || null } : {}),
         ...(formTeacherId !== undefined ? { formTeacherId: formTeacherId || null } : {}),
+        ...(gradeLevelId !== undefined ? { gradeLevelId } : {}),
       },
       include: {
         formTeacher: { include: { user: { select: { firstName: true, lastName: true } } } },
+        gradeLevel: { select: { id: true, name: true, order: true } },
         _count: { select: { enrollments: true } },
       },
     });
@@ -144,6 +157,9 @@ export const updateClass = async (req: Request, res: Response): Promise<Response
         return res.status(400).json({ error: 'This teacher is already assigned to another class.' });
       }
       return res.status(400).json({ error: 'A class with this code already exists.' });
+    }
+    if (error.code === 'P2003') {
+      return res.status(400).json({ error: 'That grade level does not exist.' });
     }
     console.error('Update Class Error:', error);
     return res.status(500).json({ error: 'Internal server error while updating class.' });
@@ -169,8 +185,14 @@ export const getClassStudents = async (req: Request, res: Response): Promise<Res
     return res.status(403).json({ error: 'You do not have permission to view this class list.' });
   }
 
+  // Not filtered to isActive: true — a Class is a homeroom for ONE academic
+  // year (never reused across years), so every Enrollment row against this
+  // classId belongs to it regardless of whether that student has since been
+  // promoted into a different class. Filtering on it here broke historical
+  // views (roster, class assessment, score sheets) once every student in an
+  // old class had been promoted out of it.
   const enrollments = await prisma.enrollment.findMany({
-    where: { classId: id, isActive: true },
+    where: { classId: id },
     include: {
       student: {
         select: {
@@ -183,7 +205,7 @@ export const getClassStudents = async (req: Request, res: Response): Promise<Res
             take: 1,
             select: {
               relation: true,
-              guardian: { select: { fullName: true, phone: true } },
+              guardian: { select: { fullName: true, phone: true, address: true } },
             },
           },
         },
@@ -204,6 +226,7 @@ export const getClassStudents = async (req: Request, res: Response): Promise<Res
         gender: e.student.gender,
         guardianName: guardian?.guardian.fullName ?? null,
         guardianPhone: guardian?.guardian.phone ?? null,
+        guardianAddress: guardian?.guardian.address ?? null,
         guardianRelation: guardian?.relation ?? null,
       };
     }),
@@ -244,8 +267,14 @@ export const getClassAssessmentReport = async (req: Request, res: Response): Pro
   });
   const classSubjectIds = classSubjects.map((cs) => cs.id);
 
+  // Not filtered to isActive: true — a Class is a homeroom for ONE academic
+  // year (never reused across years), so every Enrollment row against this
+  // classId belongs to it regardless of whether that student has since been
+  // promoted into a different class. Filtering on it here broke historical
+  // views (roster, class assessment, score sheets) once every student in an
+  // old class had been promoted out of it.
   const enrollments = await prisma.enrollment.findMany({
-    where: { classId: id, isActive: true },
+    where: { classId: id },
     include: {
       student: {
         select: {

@@ -10,6 +10,7 @@ import {
   Prisma,
   Role,
 } from '../generated/prisma/client';
+import { addGuardianToStudent } from './guardianService';
 
 interface ProfileData {
   department?: Department;
@@ -27,6 +28,10 @@ interface ProfileData {
   guardianEmail?: string;
   guardianAddress?: string;
   guardianRelation?: GuardianRelation;
+  // Admin-recorded debt for a transferred student (e.g. an unpaid balance
+  // from their previous school). Added on top of their prorated fee, never
+  // in place of it.
+  openingBalance?: number;
 }
 
 interface CreateUserInput {
@@ -80,6 +85,16 @@ function generatePassword(length = 10) {
   return Array.from(crypto.randomBytes(length), (b) => chars[b % chars.length]).join('');
 }
 
+// Passwords are hashed one-way (bcrypt) and never stored in a recoverable
+// form, so there is no way to "view" an existing password — this generates
+// and stores a brand-new one instead, returned once for the admin to share.
+export async function resetUserPassword(userId: string): Promise<string> {
+  const generatedPassword = generatePassword();
+  const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+  await prisma.user.update({ where: { id: userId }, data: { password: hashedPassword } });
+  return generatedPassword;
+}
+
 export const createUserAccount = async (input: CreateUserInput) => {
   const autoGenerateCredentials = input.role === 'STUDENT' || input.role === 'TEACHER';
 
@@ -124,33 +139,36 @@ export const createUserAccount = async (input: CreateUserInput) => {
     } else if (input.role === 'STUDENT' && input.profileData) {
       admissionNumber = await generateAdmissionNumber(tx);
 
+      // Enrolment term/date are never client-supplied — they always reflect
+      // whichever term is active right now, the same way the whole fee
+      // calculation trusts server state over anything a request claims. This
+      // is what actually fixes the bug: a student registered mid-year is
+      // billed from the current term forward, never from the start of the
+      // year. (Pre-existing debt for a transferred student is handled
+      // separately via openingBalance, not by backdating enrolmentTermId.)
+      const currentTerm = await tx.term.findFirst({ where: { isCurrent: true }, select: { id: true } });
+
       const studentProfile = await tx.studentProfile.create({
         data: {
           userId: newUser.id,
           admissionNumber,
           dateOfBirth: new Date(input.profileData.dateOfBirth!),
           gender: input.profileData.gender,
+          enrolmentTermId: currentTerm?.id ?? null,
+          enrolmentDate: new Date(),
+          openingBalance: input.profileData.openingBalance ?? 0,
         },
       });
 
       if (input.profileData.guardianName && input.profileData.guardianPhone) {
-        const guardian = await tx.guardian.create({
-          data: {
-            fullName: input.profileData.guardianName,
-            phone: input.profileData.guardianPhone,
-            alternatePhone: input.profileData.guardianAlternatePhone || null,
-            email: input.profileData.guardianEmail || null,
-            address: input.profileData.guardianAddress || null,
-          },
-        });
-
-        await tx.studentGuardian.create({
-          data: {
-            studentId: studentProfile.id,
-            guardianId: guardian.id,
-            relation: input.profileData.guardianRelation,
-            isPrimary: true,
-          },
+        await addGuardianToStudent(tx, studentProfile.id, {
+          fullName: input.profileData.guardianName,
+          phone: input.profileData.guardianPhone,
+          alternatePhone: input.profileData.guardianAlternatePhone,
+          email: input.profileData.guardianEmail,
+          address: input.profileData.guardianAddress,
+          relation: input.profileData.guardianRelation,
+          isPrimary: true,
         });
       }
 
