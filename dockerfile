@@ -32,6 +32,12 @@ RUN npm ci
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./
+# prisma/seed.ts is run directly via `tsx` (not compiled — it's outside
+# tsconfig's rootDir), and it imports from ../src/generated/prisma/client
+# and ../src/services/subjectSeedService by relative path. Copy the whole
+# src/ tree rather than hand-picking files, so seed.ts keeps working even
+# if it grows new imports later.
+COPY --from=builder /app/src ./src
 
 EXPOSE 3000
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
