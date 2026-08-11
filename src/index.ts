@@ -17,6 +17,7 @@ import gradeLevelRoutes from './routes/gradeLevelRoutes';
 import promotionRuleRoutes from './routes/promotionRuleRoutes';
 import promotionRunRoutes from './routes/promotionRunRoutes';
 import schoolSettingsRoutes from './routes/schoolSettingsRoutes';
+import healthRoutes from './routes/health';
 import { globalErrorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -47,6 +48,7 @@ app.use('/api/grade-levels', gradeLevelRoutes);
 app.use('/api/promotion-rules', promotionRuleRoutes);
 app.use('/api/promotion-runs', promotionRunRoutes);
 app.use('/api/school-settings', schoolSettingsRoutes);
+app.use('/health', healthRoutes);
 
 app.get('/status', (req, res) => {
   res.status(200).json({
