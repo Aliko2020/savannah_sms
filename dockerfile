@@ -8,6 +8,14 @@ RUN npm ci
 # lands under src/generated/prisma, and copying source afterward would
 # overwrite that freshly generated directory with the host's (client-less) copy.
 COPY . .
+
+# `prisma generate` only reads the schema — it never connects to a real
+# database — but prisma.config.ts resolves DATABASE_URL via env() at config
+# load time, which throws if the variable is completely unset. The real
+# DATABASE_URL is injected at container *runtime* by docker-compose (and
+# .env is deliberately excluded from the build context), so this build-time
+# value is just a placeholder to satisfy that check.
+ENV DATABASE_URL="postgresql://user:password@localhost:5432/placeholder"
 RUN npx prisma generate
 RUN npm run build
 
