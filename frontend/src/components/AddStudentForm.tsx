@@ -5,7 +5,7 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { apiFetch, ApiError } from '../api/client';
-import { CLASS_CATEGORIES, CLASS_CATEGORY_LABELS, GUARDIAN_RELATIONS, GUARDIAN_RELATION_LABELS } from '../constants';
+import { CLASS_CATEGORY_LABELS, GUARDIAN_RELATIONS, GUARDIAN_RELATION_LABELS } from '../constants';
 import { titleCase } from '../utils/format';
 import type { AcademicYear, ClassItem, Gender, GuardianRelation } from '../types';
 
