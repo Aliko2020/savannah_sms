@@ -323,7 +323,7 @@ export function FeeStudentDetailPage() {
                       <td className="px-6 py-3 text-slate-500">{new Date(p.createdAt).toLocaleString()}</td>
                       <td className="px-6 py-3 font-medium text-slate-900">{formatCurrency(p.amount)}</td>
                       <td className="px-6 py-3 text-slate-500">{PAYMENT_METHOD_LABELS[p.method]}</td>
-                      <td className="px-6 py-3 text-slate-500">{p.reference ?? '—'}</td>
+                      <td className="px-6 py-3 text-slate-500">{p.reference ?? 'Not provided'}</td>
                       <td className="px-6 py-3 text-slate-500">{p.recordedBy}</td>
                     </tr>
                   ))}

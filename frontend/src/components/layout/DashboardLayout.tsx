@@ -132,7 +132,7 @@ function SidebarContent({ collapsed, onNavigate, onToggleCollapsed }: { collapse
     <>
       <div className={cn('flex items-center gap-2.5 px-4 py-4', collapsed && 'justify-center px-0')}>
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-900 text-[13px] font-bold text-white">S</div>
-        <span className={cn('truncate text-[15px] font-semibold text-zinc-900', collapsed && 'hidden')}>SavannaSMS</span>
+        <span className={cn('truncate text-[15px] font-semibold text-zinc-900', collapsed && 'hidden')}>EduSavannah</span>
         <button
           onClick={onNavigate}
           aria-label="Close menu"

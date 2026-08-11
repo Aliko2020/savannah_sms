@@ -57,6 +57,4 @@ app.get('/status', (req, res) => {
 
 app.use(globalErrorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Server booting up on http://localhost:${PORT}`);
-});
+app.listen(Number(PORT) || 3000, '0.0.0.0');

@@ -89,6 +89,20 @@ export function AcademicSetupPage() {
     enabled: !!selectedYearId,
   });
 
+  // Mirrors the Academic Year selector — defaults to whichever term is
+  // current for the selected year, purely to show at a glance which term
+  // is active (the tables below aren't term-scoped, so this doesn't filter
+  // anything yet).
+  const [selectedTermId, setSelectedTermId] = useState('');
+  useEffect(() => {
+    setSelectedTermId('');
+  }, [selectedYearId]);
+  useEffect(() => {
+    if (!selectedTermId && terms && terms.length > 0) {
+      setSelectedTermId(terms.find((t) => t.isCurrent)?.id ?? terms[0].id);
+    }
+  }, [terms, selectedTermId]);
+
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
   const [termName, setTermName] = useState('');
   const [termStartDate, setTermStartDate] = useState('');
@@ -268,9 +282,9 @@ export function AcademicSetupPage() {
 
       {selectedYear && (
         <div className="max-w-7xl">
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-6 flex flex-wrap items-center gap-6">
             <div className="flex items-center gap-2">
-              <label className="text-sm text-zinc-600">Academic year</label>
+              <label className="text-sm text-zinc-600">Academic Year</label>
               <div className="w-48">
                 <Select
                   value={selectedYearId}
@@ -292,6 +306,119 @@ export function AcademicSetupPage() {
                 </Button>
               )}
             </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-zinc-600">Academic Term</label>
+              <div className="w-48">
+                <Select
+                  value={selectedTermId || undefined}
+                  onValueChange={setSelectedTermId}
+                  placeholder="Select a term"
+                  disabled={!terms || terms.length === 0}
+                  options={(terms ?? []).map((t) => ({
+                    value: t.id,
+                    label: t.isCurrent ? `${t.name} (Current)` : t.name,
+                  }))}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-zinc-900">Terms</h2>
+            {(showTermForm || (terms?.length ?? 0) < 3) && (
+              <Button onClick={() => (showTermForm ? closeTermForm() : openAddTermForm())}>
+                {showTermForm ? 'Cancel' : (
+                  <>
+                    <Plus /> Add term
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+
+          {!showTermForm && (terms?.length ?? 0) >= 3 && (
+            <p className="mt-2 text-xs text-zinc-500">An academic year can have at most 3 terms.</p>
+          )}
+
+          {showTermForm && (
+            <div className="mt-4 rounded-xl border border-border bg-surface p-6 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold text-zinc-900">{editingTerm ? `Edit ${editingTerm.name}` : 'Add term'}</h2>
+              <form onSubmit={handleSaveTerm} className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Input
+                    label="Name"
+                    required
+                    placeholder="e.g. First Term"
+                    value={termName}
+                    onChange={(e) => setTermName(e.target.value)}
+                  />
+                </div>
+                <Input
+                  type="date"
+                  label="Start Date"
+                  required
+                  value={termStartDate}
+                  onChange={(e) => setTermStartDate(e.target.value)}
+                />
+                <Input
+                  type="date"
+                  label="End Date"
+                  required
+                  value={termEndDate}
+                  onChange={(e) => setTermEndDate(e.target.value)}
+                />
+                <div className="col-span-2">
+                  <Checkbox
+                    checked={termIsCurrent}
+                    onCheckedChange={(checked) => setTermIsCurrent(checked === true)}
+                    label="Set as current term"
+                  />
+                </div>
+                <Button type="submit" loading={saveTerm.isPending} className="col-span-2 max-w-40">
+                  {editingTerm ? 'Save changes' : 'Add term'}
+                </Button>
+              </form>
+            </div>
+          )}
+
+          <div className="mt-4 mb-8 overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+            {(!terms || terms.length === 0) && (
+              <p className="px-6 py-8 text-center text-sm text-zinc-500">No terms set up yet.</p>
+            )}
+            {terms && terms.length > 0 && (
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-border text-[11px] uppercase tracking-wide text-zinc-400">
+                  <tr>
+                    <th className="px-6 py-3 font-semibold">#</th>
+                    <th className="px-6 py-3 font-semibold">Name</th>
+                    <th className="px-6 py-3 font-semibold">Start Date</th>
+                    <th className="px-6 py-3 font-semibold">End Date</th>
+                    <th className="px-6 py-3 font-semibold">Current</th>
+                    <th className="px-6 py-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {terms.map((t, index) => (
+                    <tr key={t.id} className="transition-colors hover:bg-zinc-50">
+                      <td className="px-6 py-3 tabular-nums text-zinc-400">{index + 1}</td>
+                      <td className="px-6 py-3 text-zinc-900">{t.name}</td>
+                      <td className="px-6 py-3 text-zinc-500">{new Date(t.startDate).toLocaleDateString()}</td>
+                      <td className="px-6 py-3 text-zinc-500">{new Date(t.endDate).toLocaleDateString()}</td>
+                      <td className="px-6 py-3 text-zinc-500">{t.isCurrent ? 'Yes' : '—'}</td>
+                      <td className="px-6 py-3">
+                        <Button size="sm" variant="ghost" onClick={() => openEditTermForm(t)}>
+                          Edit
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-zinc-900">Classes</h2>
             <Button onClick={() => (showForm ? closeForm() : openAddForm())}>
               {showForm ? 'Cancel' : (
                 <>
@@ -427,100 +554,6 @@ export function AcademicSetupPage() {
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
-
-          <div className="mt-8 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-zinc-900">Terms</h2>
-            {(showTermForm || (terms?.length ?? 0) < 3) && (
-              <Button onClick={() => (showTermForm ? closeTermForm() : openAddTermForm())}>
-                {showTermForm ? 'Cancel' : (
-                  <>
-                    <Plus /> Add term
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-
-          {!showTermForm && (terms?.length ?? 0) >= 3 && (
-            <p className="mt-2 text-xs text-zinc-500">An academic year can have at most 3 terms.</p>
-          )}
-
-          {showTermForm && (
-            <div className="mt-4 rounded-xl border border-border bg-surface p-6 shadow-sm">
-              <h2 className="mb-4 text-sm font-semibold text-zinc-900">{editingTerm ? `Edit ${editingTerm.name}` : 'Add term'}</h2>
-              <form onSubmit={handleSaveTerm} className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Input
-                    label="Name"
-                    required
-                    placeholder="e.g. First Term"
-                    value={termName}
-                    onChange={(e) => setTermName(e.target.value)}
-                  />
-                </div>
-                <Input
-                  type="date"
-                  label="Start Date"
-                  required
-                  value={termStartDate}
-                  onChange={(e) => setTermStartDate(e.target.value)}
-                />
-                <Input
-                  type="date"
-                  label="End Date"
-                  required
-                  value={termEndDate}
-                  onChange={(e) => setTermEndDate(e.target.value)}
-                />
-                <div className="col-span-2">
-                  <Checkbox
-                    checked={termIsCurrent}
-                    onCheckedChange={(checked) => setTermIsCurrent(checked === true)}
-                    label="Set as current term"
-                  />
-                </div>
-                <Button type="submit" loading={saveTerm.isPending} className="col-span-2 max-w-40">
-                  {editingTerm ? 'Save changes' : 'Add term'}
-                </Button>
-              </form>
-            </div>
-          )}
-
-          <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-            {(!terms || terms.length === 0) && (
-              <p className="px-6 py-8 text-center text-sm text-zinc-500">No terms set up yet.</p>
-            )}
-            {terms && terms.length > 0 && (
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-border text-[11px] uppercase tracking-wide text-zinc-400">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold">#</th>
-                    <th className="px-6 py-3 font-semibold">Name</th>
-                    <th className="px-6 py-3 font-semibold">Start Date</th>
-                    <th className="px-6 py-3 font-semibold">End Date</th>
-                    <th className="px-6 py-3 font-semibold">Current</th>
-                    <th className="px-6 py-3 font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {terms.map((t, index) => (
-                    <tr key={t.id} className="transition-colors hover:bg-zinc-50">
-                      <td className="px-6 py-3 tabular-nums text-zinc-400">{index + 1}</td>
-                      <td className="px-6 py-3 text-zinc-900">{t.name}</td>
-                      <td className="px-6 py-3 text-zinc-500">{new Date(t.startDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-3 text-zinc-500">{new Date(t.endDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-3 text-zinc-500">{t.isCurrent ? 'Yes' : '—'}</td>
-                      <td className="px-6 py-3">
-                        <Button size="sm" variant="ghost" onClick={() => openEditTermForm(t)}>
-                          Edit
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             )}
           </div>
         </div>

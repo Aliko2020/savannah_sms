@@ -216,7 +216,7 @@ export function PromotionRunDetailPage() {
                         />
                       </div>
                     ) : (
-                      titleCase(r.toClass?.name ?? '— Unassigned —')
+                      r.toClass ? titleCase(r.toClass.name) : 'Not assigned'
                     )}
                   </td>
                 </tr>

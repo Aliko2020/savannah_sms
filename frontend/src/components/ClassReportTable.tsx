@@ -44,7 +44,7 @@ export function ClassReportTable({ report }: { report: ClassReport }) {
                 const score = s.scores[subj.classSubjectId];
                 return (
                   <td key={subj.classSubjectId} className="px-6 py-3 text-center tabular-nums text-zinc-700">
-                    {score !== null ? Math.round(score * 100) / 100 : '—'}
+                    {score !== null ? Math.round(score * 100) / 100 : 'Not graded'}
                   </td>
                 );
               })}

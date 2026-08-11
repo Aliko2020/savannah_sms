@@ -68,7 +68,7 @@ export function ScoreEntryTable({ roster, drafts, onChange }: ScoreEntryTablePro
                   />
                 </td>
                 <td className="px-6 py-3 font-medium tabular-nums text-zinc-700">
-                  {total !== null ? Math.round(total * 100) / 100 : '—'}
+                  {total !== null ? Math.round(total * 100) / 100 : 'Not graded'}
                 </td>
               </tr>
             );

@@ -561,7 +561,7 @@ export function FeeManagementPage() {
           <h1 className="text-xl font-bold text-black">Fee Statement</h1>
           <p className="mb-4 text-sm text-black">
             {formatName(statementData.firstName, statementData.lastName)} · {statementData.admissionNumber} ·{' '}
-            {statementData.class ? titleCase(statementData.class.name) : '—'} · {currentYearName}
+            {statementData.class ? titleCase(statementData.class.name) : 'Not assigned'} · {currentYearName}
           </p>
           <table className="mb-6 w-full text-left text-sm text-black">
             <thead>
@@ -574,10 +574,10 @@ export function FeeManagementPage() {
             </thead>
             <tbody>
               <tr>
-                <td className="py-1 pr-4">{statementData.expected !== null ? formatCurrency(statementData.expected) : '—'}</td>
+                <td className="py-1 pr-4">{statementData.expected !== null ? formatCurrency(statementData.expected) : 'Not configured'}</td>
                 <td className="py-1 pr-4">{formatCurrency(statementData.collected)}</td>
-                <td className="py-1 pr-4">{statementData.balance !== null ? formatCurrency(statementData.balance) : '—'}</td>
-                <td className="py-1">{statementData.status ? BALANCE_STATUS_LABELS[statementData.status] : '—'}</td>
+                <td className="py-1 pr-4">{statementData.balance !== null ? formatCurrency(statementData.balance) : 'Not configured'}</td>
+                <td className="py-1">{statementData.status ? BALANCE_STATUS_LABELS[statementData.status] : 'Not configured'}</td>
               </tr>
             </tbody>
           </table>

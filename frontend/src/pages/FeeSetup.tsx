@@ -101,7 +101,7 @@ export function FeeSetupPage() {
   });
 
   const yearName = (id: string) =>
-    academicYears?.find((y) => y.id === id)?.name ?? "—";
+    academicYears?.find((y) => y.id === id)?.name ?? "Unknown";
 
   const termOptions = (terms ?? []).map((t) => ({
     value: t.id,
