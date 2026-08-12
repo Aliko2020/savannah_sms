@@ -59,4 +59,13 @@ app.get('/status', (req, res) => {
 
 app.use(globalErrorHandler);
 
-app.listen(Number(PORT) || 3000, '0.0.0.0');
+const resolvedPort = Number(PORT) || 3000;
+
+const server = app.listen(resolvedPort, '0.0.0.0', () => {
+  console.log(`Server listening on 0.0.0.0:${resolvedPort}`);
+});
+
+server.on('error', (err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});
