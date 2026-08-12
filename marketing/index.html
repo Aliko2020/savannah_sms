@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduSavannah — The Future of Learning</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(255, 255, 255, 0.03);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+      --accent-solid: #6366f1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Glow Effects */
+    .glow-1, .glow-2 {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.25;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .glow-1 {
+      width: 350px;
+      height: 350px;
+      background: #6366f1;
+      top: 10%;
+      left: 15%;
+    }
+
+    .glow-2 {
+      width: 400px;
+      height: 400px;
+      background: #ec4899;
+      bottom: 10%;
+      right: 15%;
+    }
+
+    /* Main Container */
+    .card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 680px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 3.5rem 2.5rem;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 1rem;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #818cf8;
+      margin-bottom: 1.5rem;
+    }
+
+    .title {
+      font-size: clamp(2.25rem, 5vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 480px;
+      margin: 0 auto 2.5rem;
+    }
+
+    /* Countdown Grid */
+    .timer {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .timer-unit {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 1rem 0.5rem;
+      border-radius: 14px;
+    }
+
+    .timer-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: block;
+    }
+
+    .timer-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Form Design */
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    @media (min-width: 480px) {
+      .form {
+        flex-direction: row;
+      }
+    }
+
+    .input {
+      flex: 1;
+      padding: 0.875rem 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text-main);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input:focus {
+      border-color: var(--accent-solid);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .button {
+      padding: 0.875rem 1.5rem;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent-gradient);
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .button:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .button:active {
+      transform: translateY(0);
+    }
+
+    /* Success / Toast message */
+    .message {
+      font-size: 0.85rem;
+      color: #4ade80;
+      margin-top: 0.75rem;
+      display: none;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 2.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient background glow elements -->
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+
+  <main class="card">
+    <span class="badge">EduSavannah</span>
+    
+    <h1 class="title">Something is on the way.</h1>
+    
+    <p class="subtitle">
+      We are building a next-generation learning platform. Join the waitlist to receive early access and launch updates.
+    </p>
+
+    <!-- Countdown Timer -->
+    <div class="timer">
+      <div class="timer-unit">
+        <span class="timer-value" id="days">00</span>
+        <span class="timer-label">Days</span>
+      </div>
+      <div class="timer-unit">
+        <span class="timer-value" id="hours">00</span>
+        <span class="timer-label">Hours</span>
+      </div>
+      <div class="timer-unit">
+        <span class="timer-value" id="minutes">00</span>
+        <span class="timer-label">Mins</span>
+      </div>
+      <div class="timer-unit">
+        <span class="timer-value" id="seconds">00</span>
+        <span class="timer-label">Secs</span>
+      </div>
+    </div>
+
+    <!-- Email Subscription Form -->
+    <form class="form" id="notify-form">
+      <input 
+        type="email" 
+        class="input" 
+        placeholder="Enter your email address" 
+        required
+      >
+      <button type="submit" class="button">Notify Me</button>
+    </form>
+    <div class="message" id="form-message">Thank you! You've been added to the waitlist.</div>
+
+    <footer class="footer">
+      &copy; <span id="year"></span> EduSavannah. All rights reserved.
+    </footer>
+  </main>
+
+  <script>
+    // Set dynamic copyright year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Target Launch Date: 30 days from now
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 30);
+
+    function updateCountdown() {
+      const now = new Date().getTime();
+      const difference = targetDate.getTime() - now;
+
+      if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+        document.getElementById('days').textContent = String(days).padStart(2, '0');
+        document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+        document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+        document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+      }
+    }
+
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    // Form submission interaction
+    document.getElementById('notify-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      document.getElementById('form-message').style.display = 'block';
+      this.reset();
+    });
+  </script>
+</body>
+</html>
