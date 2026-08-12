@@ -142,7 +142,7 @@ export function LoginPage() {
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs font-bold text-primary-900">
                 S
               </div>
-              <span className="text-sm font-semibold text-white">EduSavannah</span>
+              <span className="text-sm font-semibold text-white">eduSavannah</span>
             </div>
 
             <div className="relative">
