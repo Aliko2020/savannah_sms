@@ -47,7 +47,7 @@ export interface InputProps
   /** Caption above the field. Deliberately static, not floating — reads
    *  cleanly at a glance and never overlaps a long value the way an
    *  animated floating label can. */
-  label?: string;
+  label?: ReactNode;
   /** Muted helper text shown below the field when there's no error. */
   hint?: string;
   /** Validation message — replaces `hint`, tints the ring red, adds an icon. */

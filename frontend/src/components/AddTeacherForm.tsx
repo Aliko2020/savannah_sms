@@ -1,18 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from './ui/Button';
+import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { apiFetch, ApiError } from '../api/client';
-import {
-  CONTRACT_TYPES,
-  CONTRACT_TYPE_LABELS,
-  DEPARTMENTS,
-  DEPARTMENT_LABELS,
-  EMPLOYMENT_STATUSES,
-  EMPLOYMENT_STATUS_LABELS,
-} from '../constants';
-import type { ContractType, Department, EmploymentStatus, Gender } from '../types';
+import { CONTRACT_TYPES, CONTRACT_TYPE_LABELS, DEPARTMENTS, DEPARTMENT_LABELS } from '../constants';
+import type { ContractType, Department, Gender } from '../types';
 
 interface CreateTeacherResponse {
   message: string;
@@ -33,9 +27,13 @@ export function AddTeacherForm({ onDone }: { onDone: () => void }) {
   const [teacherEmail, setTeacherEmail] = useState('');
   const [teacherGender, setTeacherGender] = useState<Gender>('MALE');
   const [qualification, setQualification] = useState('');
-  const [employmentStatus, setEmploymentStatus] = useState<EmploymentStatus | ''>('');
+  const [isLicensed, setIsLicensed] = useState(false);
+  const [licenseNumber, setLicenseNumber] = useState('');
   const [contractType, setContractType] = useState<ContractType | ''>('');
   const [ssnitNumber, setSsnitNumber] = useState('');
+  const [religion, setReligion] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -52,9 +50,13 @@ export function AddTeacherForm({ onDone }: { onDone: () => void }) {
             phone: teacherPhone,
             gender: teacherGender,
             qualification: qualification || undefined,
-            employmentStatus: employmentStatus || undefined,
+            isLicensed,
+            licenseNumber: isLicensed ? licenseNumber || undefined : undefined,
             contractType: contractType || undefined,
             ssnitNumber: ssnitNumber || undefined,
+            religion: religion || undefined,
+            bankName: bankName || undefined,
+            bankAccountNumber: bankAccountNumber || undefined,
           },
         }),
       }),
@@ -89,13 +91,14 @@ export function AddTeacherForm({ onDone }: { onDone: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="mb-6 space-y-4 rounded-xl border border-border bg-surface p-6 shadow-sm">
+      <h2 className="text-sm font-semibold text-zinc-900">Add Teacher</h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Input label="First name" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
         <Input label="Other name" value={otherName} onChange={(e) => setOtherName(e.target.value)} />
         <Input label="Last name" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 md:grid-cols-3">
         <Select
           label="Department"
           required
@@ -131,13 +134,6 @@ export function AddTeacherForm({ onDone }: { onDone: () => void }) {
           ]}
         />
         <Select
-          label="Employment Status"
-          placeholder="—"
-          value={employmentStatus || undefined}
-          onValueChange={(v) => setEmploymentStatus(v as EmploymentStatus)}
-          options={EMPLOYMENT_STATUSES.map((s) => ({ value: s, label: EMPLOYMENT_STATUS_LABELS[s] }))}
-        />
-        <Select
           label="Contract Type"
           placeholder="—"
           value={contractType || undefined}
@@ -145,13 +141,35 @@ export function AddTeacherForm({ onDone }: { onDone: () => void }) {
           options={CONTRACT_TYPES.map((c) => ({ value: c, label: CONTRACT_TYPE_LABELS[c] }))}
         />
         <Input label="SSNIT Number" value={ssnitNumber} onChange={(e) => setSsnitNumber(e.target.value)} />
-        <div className="md:col-span-2">
+        <Input label="Religion" value={religion} onChange={(e) => setReligion(e.target.value)} />
+        <Input label="Bank name" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+        <Input
+          label="Account number"
+          value={bankAccountNumber}
+          onChange={(e) => setBankAccountNumber(e.target.value)}
+        />
+        <div className="md:col-span-3">
           <Input
             label="Qualification"
             placeholder="e.g. B.Ed Mathematics"
             value={qualification}
             onChange={(e) => setQualification(e.target.value)}
           />
+        </div>
+        <div className="md:col-span-3 flex flex-col gap-2">
+          <Checkbox
+            label="Is Licensed?"
+            checked={isLicensed}
+            onCheckedChange={(checked) => setIsLicensed(checked === true)}
+          />
+          {isLicensed && (
+            <Input
+              label="License number"
+              required
+              value={licenseNumber}
+              onChange={(e) => setLicenseNumber(e.target.value)}
+            />
+          )}
         </div>
       </div>
 

@@ -7,6 +7,7 @@ export interface GuardianInput {
   alternatePhone?: string | null;
   email?: string | null;
   address?: string | null;
+  occupation?: string | null;
   relation?: GuardianRelation;
   isPrimary?: boolean;
 }
@@ -47,6 +48,7 @@ export async function addGuardianToStudent(
       alternatePhone: input.alternatePhone || null,
       email: input.email || null,
       address: input.address || null,
+      occupation: input.occupation || null,
     },
   });
 
@@ -80,6 +82,7 @@ export async function updateStudentGuardian(
       ...(input.alternatePhone !== undefined ? { alternatePhone: input.alternatePhone || null } : {}),
       ...(input.email !== undefined ? { email: input.email || null } : {}),
       ...(input.address !== undefined ? { address: input.address || null } : {}),
+      ...(input.occupation !== undefined ? { occupation: input.occupation || null } : {}),
     },
   });
 

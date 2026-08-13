@@ -62,10 +62,10 @@ export function ScoreSheetDocument({ title, academicYearName, className, termNam
               Student Name
             </th>
             <th colSpan={4} className="border border-black px-2 py-1">
-              Class Score (40%)
+              Class Score — 40% of Total
             </th>
-            <th rowSpan={2} className="border border-black px-2 py-1 align-bottom">
-              Exams Score (100%)
+            <th className="border border-black px-2 py-1">
+              Exams Score — 60% of Total
             </th>
           </tr>
           <tr>
@@ -73,6 +73,7 @@ export function ScoreSheetDocument({ title, academicYearName, className, termNam
             <th className="border border-black px-2 py-1 font-normal">10</th>
             <th className="border border-black px-2 py-1 font-normal">10</th>
             <th className="border border-black px-2 py-1 font-normal">10</th>
+            <th className="border border-black px-2 py-1 font-normal">Out of 100</th>
           </tr>
         </thead>
         <tbody>

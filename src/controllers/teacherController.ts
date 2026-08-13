@@ -51,6 +51,9 @@ function serializeTeacherDetail(teacher: {
   bankName: string | null;
   bankAccountNumber: string | null;
   ssnitNumber: string | null;
+  religion: string | null;
+  isLicensed: boolean;
+  licenseNumber: string | null;
   formClasses: { id: string; name: string; code: string; category: string; _count: { enrollments: number } }[];
 }) {
   return {
@@ -71,6 +74,9 @@ function serializeTeacherDetail(teacher: {
     bankName: teacher.bankName,
     bankAccountNumber: teacher.bankAccountNumber,
     ssnitNumber: teacher.ssnitNumber,
+    religion: teacher.religion,
+    isLicensed: teacher.isLicensed,
+    licenseNumber: teacher.licenseNumber,
     assignedClasses: teacher.formClasses.map((c) => ({
       id: c.id,
       name: c.name,
@@ -132,6 +138,9 @@ export const updateTeacher = async (req: Request, res: Response): Promise<Respon
     bankName,
     bankAccountNumber,
     ssnitNumber,
+    religion,
+    isLicensed,
+    licenseNumber,
   } = req.body;
 
   if (department !== undefined && department !== null && !Object.values(Department).includes(department)) {
@@ -160,6 +169,10 @@ export const updateTeacher = async (req: Request, res: Response): Promise<Respon
     return res.status(400).json({ error: 'Invalid email address.' });
   }
 
+  if (isLicensed === true && !licenseNumber) {
+    return res.status(400).json({ error: 'A license number is required when the teacher is marked as licensed.' });
+  }
+
   try {
     const updated = await prisma.teacherProfile.update({
       where: { id },
@@ -173,6 +186,8 @@ export const updateTeacher = async (req: Request, res: Response): Promise<Respon
         ...(bankName !== undefined ? { bankName } : {}),
         ...(bankAccountNumber !== undefined ? { bankAccountNumber } : {}),
         ...(ssnitNumber !== undefined ? { ssnitNumber } : {}),
+        ...(religion !== undefined ? { religion } : {}),
+        ...(isLicensed !== undefined ? { isLicensed, licenseNumber: isLicensed ? licenseNumber : null } : {}),
         ...(email !== undefined ? { user: { update: { email: email || null } } } : {}),
       },
       include: teacherDetailInclude,
