@@ -99,7 +99,7 @@ export function SubjectSetupPage() {
 
   return (
     <DashboardLayout title="Subject Setup" icon={BookOpen}>
-      <div className="max-w-3xl">
+      <div className="max-w-5xl">
         <div className="mb-4 flex items-center justify-end gap-3">
           <Button variant="secondary" loading={loadStandardSubjects.isPending} onClick={() => loadStandardSubjects.mutate()}>
             Load standard subjects

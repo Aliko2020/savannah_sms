@@ -64,20 +64,37 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
     return res.status(400).json({ error: "Invalid phone number. Use a 10-digit Ghanaian number, e.g. 0501234567." });
   }
 
-  const normalizedGuardianPhone =
-    role === 'STUDENT' && profileData?.guardianPhone ? normalizeGhanaPhone(profileData.guardianPhone) : undefined;
-  if (role === 'STUDENT' && profileData?.guardianPhone && !normalizedGuardianPhone) {
-    return res.status(400).json({ error: "Invalid guardian phone number. Use a 10-digit Ghanaian number, e.g. 0501234567." });
-  }
-
-  const normalizedGuardianAltPhone =
-    role === 'STUDENT' && profileData?.guardianAlternatePhone
-      ? normalizeGhanaPhone(profileData.guardianAlternatePhone)
-      : undefined;
-  if (role === 'STUDENT' && profileData?.guardianAlternatePhone && !normalizedGuardianAltPhone) {
-    return res
-      .status(400)
-      .json({ error: "Invalid guardian alternate phone number. Use a 10-digit Ghanaian number, e.g. 0501234567." });
+  // Zero or more guardians (e.g. Mother + Father) — each one, if present at
+  // all, still needs a name/valid phone/valid relation just like the old
+  // single-guardian flow did.
+  let normalizedGuardians: typeof profileData.guardians;
+  if (role === 'STUDENT' && Array.isArray(profileData?.guardians) && profileData.guardians.length > 0) {
+    normalizedGuardians = [];
+    for (const guardian of profileData.guardians) {
+      if (!guardian.fullName || !guardian.phone) {
+        return res.status(400).json({ error: "Each guardian needs a full name and phone number." });
+      }
+      const normalizedPhone = normalizeGhanaPhone(guardian.phone);
+      if (!normalizedPhone) {
+        return res
+          .status(400)
+          .json({ error: "Invalid guardian phone number. Use a 10-digit Ghanaian number, e.g. 0501234567." });
+      }
+      const normalizedAltPhone = guardian.alternatePhone ? normalizeGhanaPhone(guardian.alternatePhone) : undefined;
+      if (guardian.alternatePhone && !normalizedAltPhone) {
+        return res
+          .status(400)
+          .json({ error: "Invalid guardian alternate phone number. Use a 10-digit Ghanaian number, e.g. 0501234567." });
+      }
+      if (!guardian.relation || !Object.values(GuardianRelation).includes(guardian.relation)) {
+        return res.status(400).json({ error: "Invalid guardian relationship." });
+      }
+      normalizedGuardians.push({
+        ...guardian,
+        phone: normalizedPhone,
+        alternatePhone: normalizedAltPhone ?? guardian.alternatePhone,
+      });
+    }
   }
 
   if (role === 'TEACHER' && !profileData?.department) {
@@ -104,12 +121,8 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
     return res.status(400).json({ error: "Invalid contract type." });
   }
 
-  if (
-    role === 'STUDENT' &&
-    profileData?.guardianRelation &&
-    !Object.values(GuardianRelation).includes(profileData.guardianRelation)
-  ) {
-    return res.status(400).json({ error: "Invalid guardian relationship." });
+  if (role === 'TEACHER' && profileData?.isLicensed && !profileData?.licenseNumber) {
+    return res.status(400).json({ error: "A license number is required when the teacher is marked as licensed." });
   }
 
   if (
@@ -133,8 +146,7 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
         ? {
             ...profileData,
             ...(normalizedPhone ? { phone: normalizedPhone } : {}),
-            ...(normalizedGuardianPhone ? { guardianPhone: normalizedGuardianPhone } : {}),
-            ...(normalizedGuardianAltPhone ? { guardianAlternatePhone: normalizedGuardianAltPhone } : {}),
+            ...(normalizedGuardians ? { guardians: normalizedGuardians } : {}),
           }
         : profileData,
     });

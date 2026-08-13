@@ -1,39 +1,48 @@
-import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { FileStack, Printer } from 'lucide-react';
-import { DashboardLayout } from '../components/layout/DashboardLayout';
-import { Button } from '../components/ui/Button';
-import { Select } from '../components/ui/Select';
-import { ReportCardDocument } from '../components/ReportCardDocument';
-import { apiFetch } from '../api/client';
-import { titleCase } from '../utils/format';
-import type { AcademicYear, ClassItem, ClassReportCards, SchoolSettings, Term } from '../types';
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { FileStack, Printer } from "lucide-react";
+import { DashboardLayout } from "../components/layout/DashboardLayout";
+import { Button } from "../components/ui/Button";
+import { Select } from "../components/ui/Select";
+import { ReportCardDocument } from "../components/ReportCardDocument";
+import { apiFetch } from "../api/client";
+import { titleCase } from "../utils/format";
+import type {
+  AcademicYear,
+  ClassItem,
+  ClassReportCards,
+  SchoolSettings,
+  Term,
+} from "../types";
 
 export function BulkReportCardsPage() {
   const { data: school } = useQuery({
-    queryKey: ['school-settings'],
-    queryFn: () => apiFetch<SchoolSettings>('/school-settings'),
+    queryKey: ["school-settings"],
+    queryFn: () => apiFetch<SchoolSettings>("/school-settings"),
   });
 
   const { data: academicYears } = useQuery({
-    queryKey: ['academic-years'],
-    queryFn: () => apiFetch<AcademicYear[]>('/academic-years'),
+    queryKey: ["academic-years"],
+    queryFn: () => apiFetch<AcademicYear[]>("/academic-years"),
   });
-  const [academicYearId, setAcademicYearId] = useState('');
+  const [academicYearId, setAcademicYearId] = useState("");
   useEffect(() => {
     if (!academicYearId && academicYears && academicYears.length > 0) {
-      setAcademicYearId(academicYears.find((y) => y.isCurrent)?.id ?? academicYears[0].id);
+      setAcademicYearId(
+        academicYears.find((y) => y.isCurrent)?.id ?? academicYears[0].id,
+      );
     }
   }, [academicYears, academicYearId]);
 
   const { data: classes } = useQuery({
-    queryKey: ['classes', academicYearId],
-    queryFn: () => apiFetch<ClassItem[]>(`/classes?academicYearId=${academicYearId}`),
+    queryKey: ["classes", academicYearId],
+    queryFn: () =>
+      apiFetch<ClassItem[]>(`/classes?academicYearId=${academicYearId}`),
     enabled: !!academicYearId,
   });
-  const [classId, setClassId] = useState('');
+  const [classId, setClassId] = useState("");
   useEffect(() => {
-    setClassId('');
+    setClassId("");
   }, [academicYearId]);
   useEffect(() => {
     if (!classId && classes && classes.length > 0) {
@@ -42,13 +51,13 @@ export function BulkReportCardsPage() {
   }, [classes, classId]);
 
   const { data: terms } = useQuery({
-    queryKey: ['terms', academicYearId],
+    queryKey: ["terms", academicYearId],
     queryFn: () => apiFetch<Term[]>(`/terms?academicYearId=${academicYearId}`),
     enabled: !!academicYearId,
   });
-  const [termId, setTermId] = useState('');
+  const [termId, setTermId] = useState("");
   useEffect(() => {
-    setTermId('');
+    setTermId("");
   }, [academicYearId]);
   useEffect(() => {
     if (!termId && terms && terms.length > 0) {
@@ -62,8 +71,11 @@ export function BulkReportCardsPage() {
     isError,
     error,
   } = useQuery({
-    queryKey: ['class-report-cards', classId, termId],
-    queryFn: () => apiFetch<ClassReportCards>(`/classes/${classId}/report-cards?termId=${termId}`),
+    queryKey: ["class-report-cards", classId, termId],
+    queryFn: () =>
+      apiFetch<ClassReportCards>(
+        `/classes/${classId}/report-cards?termId=${termId}`,
+      ),
     enabled: !!classId && !!termId,
     retry: false,
   });
@@ -87,7 +99,10 @@ export function BulkReportCardsPage() {
             label="Academic Year"
             value={academicYearId}
             onValueChange={setAcademicYearId}
-            options={(academicYears ?? []).map((y) => ({ value: y.id, label: y.name }))}
+            options={(academicYears ?? []).map((y) => ({
+              value: y.id,
+              label: y.name,
+            }))}
           />
         </div>
         <div className="w-52">
@@ -95,7 +110,10 @@ export function BulkReportCardsPage() {
             label="Class"
             value={classId}
             onValueChange={setClassId}
-            options={(classes ?? []).map((c) => ({ value: c.id, label: titleCase(c.name) }))}
+            options={(classes ?? []).map((c) => ({
+              value: c.id,
+              label: titleCase(c.name),
+            }))}
           />
         </div>
         <div className="w-40">
@@ -112,18 +130,25 @@ export function BulkReportCardsPage() {
 
       {isError && (
         <p className="text-sm text-danger-600">
-          {error instanceof Error ? error.message : 'Could not load report cards for this class.'}
+          {error instanceof Error
+            ? error.message
+            : "Could not load report cards for this class."}
         </p>
       )}
 
       {report && report.students.length === 0 && (
-        <p className="text-sm text-zinc-500">No students enrolled in this class yet.</p>
+        <p className="text-sm text-zinc-500">
+          No students enrolled in this class yet.
+        </p>
       )}
 
       {report && school && report.students.length > 0 && (
-        <div className="space-y-8 print:space-y-0">
+        <div className="flex flex-col items-start space-y-8 print:space-y-0">
           {report.students.map((studentReport) => (
-            <div key={studentReport.student.id} className="print:break-after-page">
+            <div
+              key={studentReport.student.id}
+              className="print:break-after-page"
+            >
               <ReportCardDocument report={studentReport} school={school} />
             </div>
           ))}

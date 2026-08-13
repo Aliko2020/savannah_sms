@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { Users } from 'lucide-react';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { Button } from '../components/ui/Button';
+import { Checkbox } from '../components/ui/Checkbox';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Avatar } from '../components/Avatar';
@@ -86,6 +87,9 @@ export function TeacherProfilePage() {
   const [bankName, setBankName] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [ssnitNumber, setSsnitNumber] = useState('');
+  const [religion, setReligion] = useState('');
+  const [isLicensed, setIsLicensed] = useState(false);
+  const [licenseNumber, setLicenseNumber] = useState('');
 
   function openEdit() {
     if (!teacher) return;
@@ -98,6 +102,9 @@ export function TeacherProfilePage() {
     setBankName(teacher.bankName ?? '');
     setBankAccountNumber(teacher.bankAccountNumber ?? '');
     setSsnitNumber(teacher.ssnitNumber ?? '');
+    setReligion(teacher.religion ?? '');
+    setIsLicensed(teacher.isLicensed);
+    setLicenseNumber(teacher.licenseNumber ?? '');
     setEditing(true);
   }
 
@@ -122,6 +129,9 @@ export function TeacherProfilePage() {
           bankName: bankName || null,
           bankAccountNumber: bankAccountNumber || null,
           ssnitNumber: ssnitNumber || null,
+          religion: religion || null,
+          isLicensed,
+          licenseNumber: isLicensed ? licenseNumber || null : null,
         }),
       }),
     onSuccess: () => {
@@ -242,37 +252,41 @@ export function TeacherProfilePage() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
                 <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Core Profile</h2>
-                <dl className="space-y-3 text-sm">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
                   <div>
-                    <dt className="text-zinc-500">Department</dt>
-                    <dd className="text-zinc-900">
+                    <dt className="text-xs text-zinc-500">Department</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">
                       {teacher.department ? DEPARTMENT_LABELS[teacher.department] : 'Not set'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-zinc-500">Employment Status</dt>
-                    <dd className="text-zinc-900">
+                    <dt className="text-xs text-zinc-500">Employment Status</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">
                       {teacher.employmentStatus ? EMPLOYMENT_STATUS_LABELS[teacher.employmentStatus] : 'Not set'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-zinc-500">Phone Number</dt>
-                    <dd className="text-zinc-900">{teacher.phone ?? 'Not provided'}</dd>
+                    <dt className="text-xs text-zinc-500">Phone Number</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">{teacher.phone ?? 'Not provided'}</dd>
                   </div>
                   <div>
-                    <dt className="text-zinc-500">Email</dt>
-                    <dd className="text-zinc-900">{teacher.email ?? 'Not provided'}</dd>
+                    <dt className="text-xs text-zinc-500">Email</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">{teacher.email ?? 'Not provided'}</dd>
                   </div>
-                  <div>
-                    <dt className="text-zinc-500">Assigned Class</dt>
+                  <div className="col-span-2">
+                    <dt className="text-xs text-zinc-500">Religion</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">{teacher.religion ?? 'Not provided'}</dd>
+                  </div>
+                  <div className="col-span-2 border-t border-border pt-4">
+                    <dt className="text-xs text-zinc-500">Assigned Class</dt>
                     {teacher.assignedClasses.length > 0 ? (
-                      <dd className="text-zinc-900">
+                      <dd className="mt-0.5 font-medium text-zinc-900">
                         {teacher.assignedClasses
                           .map((c) => `${titleCase(c.name)} (${c.studentCount} students)`)
                           .join(', ')}
                       </dd>
                     ) : canManage ? (
-                      <dd className="mt-1 flex items-center gap-2">
+                      <dd className="mt-1.5 flex items-center gap-2">
                         {unassignedClasses.length > 0 ? (
                           <>
                             <div className="w-44">
@@ -293,7 +307,7 @@ export function TeacherProfilePage() {
                         )}
                       </dd>
                     ) : (
-                      <dd className="text-zinc-900">Not assigned</dd>
+                      <dd className="mt-0.5 font-medium text-zinc-900">Not assigned</dd>
                     )}
                   </div>
                 </dl>
@@ -303,32 +317,38 @@ export function TeacherProfilePage() {
                 <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
                   Employment &amp; Banking
                 </h2>
-                <dl className="space-y-3 text-sm">
-                  <div>
-                    <dt className="text-zinc-500">Qualifications</dt>
-                    <dd className="text-zinc-900">{teacher.qualification ?? 'Not provided'}</dd>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
+                  <div className="col-span-2">
+                    <dt className="text-xs text-zinc-500">Qualifications</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">{teacher.qualification ?? 'Not provided'}</dd>
                   </div>
                   <div>
-                    <dt className="text-zinc-500">Date of Joining</dt>
-                    <dd className="text-zinc-900">{new Date(teacher.hiredAt).toLocaleDateString()}</dd>
+                    <dt className="text-xs text-zinc-500">Date of Joining</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">{new Date(teacher.hiredAt).toLocaleDateString()}</dd>
                   </div>
                   <div>
-                    <dt className="text-zinc-500">Contract Type</dt>
-                    <dd className="text-zinc-900">
+                    <dt className="text-xs text-zinc-500">Contract Type</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">
                       {teacher.contractType ? CONTRACT_TYPE_LABELS[teacher.contractType] : 'Not set'}
                     </dd>
                   </div>
-                  <div>
-                    <dt className="text-zinc-500">Bank Account Details</dt>
-                    <dd className="text-zinc-900">
+                  <div className="col-span-2">
+                    <dt className="text-xs text-zinc-500">Bank Account Details</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">
                       {teacher.bankName || teacher.bankAccountNumber
                         ? `${teacher.bankName ?? 'Not provided'} · ${teacher.bankAccountNumber ?? 'Not provided'}`
                         : 'Not provided'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-zinc-500">SSNIT Number</dt>
-                    <dd className="text-zinc-900">{teacher.ssnitNumber ?? 'Not provided'}</dd>
+                    <dt className="text-xs text-zinc-500">SSNIT Number</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">{teacher.ssnitNumber ?? 'Not provided'}</dd>
+                  </div>
+                  <div className="col-span-2 border-t border-border pt-4">
+                    <dt className="text-xs text-zinc-500">Professional License</dt>
+                    <dd className="mt-0.5 font-medium text-zinc-900">
+                      {teacher.isLicensed ? teacher.licenseNumber ?? 'Licensed (no number on file)' : 'Not licensed'}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -390,9 +410,25 @@ export function TeacherProfilePage() {
                   onChange={(e) => setQualification(e.target.value)}
                 />
               </div>
+              <Input label="Religion" value={religion} onChange={(e) => setReligion(e.target.value)} />
               <Input label="Bank Name" value={bankName} onChange={(e) => setBankName(e.target.value)} />
               <Input label="Bank Account Number" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} />
               <Input label="SSNIT Number" value={ssnitNumber} onChange={(e) => setSsnitNumber(e.target.value)} />
+              <div className="sm:col-span-2 flex flex-col gap-2">
+                <Checkbox
+                  label="Is Licensed?"
+                  checked={isLicensed}
+                  onCheckedChange={(checked) => setIsLicensed(checked === true)}
+                />
+                {isLicensed && (
+                  <Input
+                    label="License number"
+                    required
+                    value={licenseNumber}
+                    onChange={(e) => setLicenseNumber(e.target.value)}
+                  />
+                )}
+              </div>
             </div>
 
             <Button type="submit" loading={saveTeacher.isPending} className="mt-4">

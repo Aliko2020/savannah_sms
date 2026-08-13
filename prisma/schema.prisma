@@ -149,6 +149,12 @@ model TeacherProfile {
   bankName          String?
   bankAccountNumber String?
   ssnitNumber       String?
+  religion          String?
+
+  // A teaching license (e.g. NTC license in Ghana) is optional — not every
+  // hire has one yet — so the number only ever matters when isLicensed is true.
+  isLicensed   Boolean @default(false)
+  licenseNumber String?
 
   formClasses   Class[] // homerooms where this teacher is the form teacher
   classSubjects ClassSubject[] // subjects this teacher teaches
@@ -163,6 +169,12 @@ model StudentProfile {
   admissionNumber String   @unique
   dateOfBirth     DateTime @db.Date
   gender          Gender?
+
+  // Prior schooling history — all optional/free text, since a first-time
+  // enrollee (most students) has none of this to report.
+  previousSchool    String?
+  reasonForLeaving  String?
+  medicalCondition  String?
 
   // When this student first joined the school — fees are only ever billed
   // for terms on or after this term, so a mid-year admission is never
@@ -198,6 +210,7 @@ model Guardian {
   alternatePhone String?
   email          String?
   address        String?
+  occupation     String?
 
   students StudentGuardian[]
 

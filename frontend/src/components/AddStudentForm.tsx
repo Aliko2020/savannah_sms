@@ -1,11 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { apiFetch, ApiError } from '../api/client';
-import { CLASS_CATEGORY_LABELS, GUARDIAN_RELATIONS, GUARDIAN_RELATION_LABELS } from '../constants';
+import { CLASS_CATEGORY_LABELS } from '../constants';
 import { titleCase } from '../utils/format';
 import type { AcademicYear, ClassItem, Gender, GuardianRelation } from '../types';
 
@@ -17,6 +17,23 @@ interface CreateStudentResponse {
   generatedPassword?: string;
 }
 
+function requiredLabel(text: string): ReactNode {
+  return (
+    <>
+      {text}
+      <span className="ml-0.5 text-danger-600">*</span>
+    </>
+  );
+}
+
+function isCompleteGuardian(fullName: string, phone: string, address: string) {
+  return !!(fullName && phone && address);
+}
+
+function isPartialGuardian(fullName: string, phone: string, address: string) {
+  return !!(fullName || phone || address) && !isCompleteGuardian(fullName, phone, address);
+}
+
 export function AddStudentForm({ onDone }: { onDone: () => void }) {
   const queryClient = useQueryClient();
 
@@ -26,12 +43,21 @@ export function AddStudentForm({ onDone }: { onDone: () => void }) {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState<Gender>('MALE');
   const [classId, setClassId] = useState('');
-  const [guardianName, setGuardianName] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('');
-  const [guardianAlternatePhone, setGuardianAlternatePhone] = useState('');
-  const [guardianEmail, setGuardianEmail] = useState('');
-  const [guardianAddress, setGuardianAddress] = useState('');
-  const [guardianRelation, setGuardianRelation] = useState<GuardianRelation>('GUARDIAN');
+  const [previousSchool, setPreviousSchool] = useState('');
+  const [reasonForLeaving, setReasonForLeaving] = useState('');
+  const [medicalCondition, setMedicalCondition] = useState('');
+
+  const [motherName, setMotherName] = useState('');
+  const [motherPhone, setMotherPhone] = useState('');
+  const [motherAddress, setMotherAddress] = useState('');
+  const [motherOccupation, setMotherOccupation] = useState('');
+
+  const [fatherName, setFatherName] = useState('');
+  const [fatherPhone, setFatherPhone] = useState('');
+  const [fatherAddress, setFatherAddress] = useState('');
+  const [fatherOccupation, setFatherOccupation] = useState('');
+
+  const [guardianError, setGuardianError] = useState<string | null>(null);
 
   const { data: academicYears } = useQuery({
     queryKey: ['academic-years'],
@@ -48,8 +74,35 @@ export function AddStudentForm({ onDone }: { onDone: () => void }) {
   const studentBlocked = (classes?.length ?? 0) === 0;
 
   const mutation = useMutation({
-    mutationFn: () =>
-      apiFetch<CreateStudentResponse>('/users', {
+    mutationFn: () => {
+      const guardians: {
+        fullName: string;
+        phone: string;
+        address?: string;
+        occupation?: string;
+        relation: GuardianRelation;
+      }[] = [];
+
+      if (isCompleteGuardian(motherName, motherPhone, motherAddress)) {
+        guardians.push({
+          fullName: motherName,
+          phone: motherPhone,
+          address: motherAddress,
+          occupation: motherOccupation || undefined,
+          relation: 'MOTHER',
+        });
+      }
+      if (isCompleteGuardian(fatherName, fatherPhone, fatherAddress)) {
+        guardians.push({
+          fullName: fatherName,
+          phone: fatherPhone,
+          address: fatherAddress,
+          occupation: fatherOccupation || undefined,
+          relation: 'FATHER',
+        });
+      }
+
+      return apiFetch<CreateStudentResponse>('/users', {
         method: 'POST',
         body: JSON.stringify({
           firstName,
@@ -60,15 +113,14 @@ export function AddStudentForm({ onDone }: { onDone: () => void }) {
             dateOfBirth,
             gender,
             classId,
-            guardianName,
-            guardianPhone,
-            guardianAlternatePhone: guardianAlternatePhone || undefined,
-            guardianEmail: guardianEmail || undefined,
-            guardianAddress: guardianAddress || undefined,
-            guardianRelation,
+            previousSchool: previousSchool || undefined,
+            reasonForLeaving: reasonForLeaving || undefined,
+            medicalCondition: medicalCondition || undefined,
+            guardians,
           },
         }),
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
     },
@@ -76,6 +128,24 @@ export function AddStudentForm({ onDone }: { onDone: () => void }) {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+
+    const motherComplete = isCompleteGuardian(motherName, motherPhone, motherAddress);
+    const fatherComplete = isCompleteGuardian(fatherName, fatherPhone, fatherAddress);
+
+    if (isPartialGuardian(motherName, motherPhone, motherAddress)) {
+      setGuardianError("Complete the Mother's full name, phone, and address, or leave all three blank.");
+      return;
+    }
+    if (isPartialGuardian(fatherName, fatherPhone, fatherAddress)) {
+      setGuardianError("Complete the Father's full name, phone, and address, or leave all three blank.");
+      return;
+    }
+    if (!motherComplete && !fatherComplete) {
+      setGuardianError('Add at least one parent (Mother or Father) with full name, phone, and address.');
+      return;
+    }
+
+    setGuardianError(null);
     mutation.mutate();
   }
 
@@ -155,37 +225,87 @@ export function AddStudentForm({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="border-t border-border pt-4">
-        <p className="mb-3 text-sm font-medium text-zinc-700">Parent / Guardian</p>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Select
-            label="Relationship"
-            value={guardianRelation}
-            onValueChange={(v) => setGuardianRelation(v as GuardianRelation)}
-            options={GUARDIAN_RELATIONS.map((r) => ({ value: r, label: GUARDIAN_RELATION_LABELS[r] }))}
-          />
-          <Input label="Full name" required value={guardianName} onChange={(e) => setGuardianName(e.target.value)} />
           <Input
-            type="tel"
-            label="Phone"
-            required
-            value={guardianPhone}
-            onChange={(e) => setGuardianPhone(e.target.value)}
-            pattern="0[2-5][0-9]{8}"
-            title="Enter a valid 10-digit Ghanaian phone number, e.g. 0501234567"
-            placeholder="0501234567"
+            label="Previous school (if any)"
+            value={previousSchool}
+            onChange={(e) => setPreviousSchool(e.target.value)}
           />
           <Input
-            type="tel"
-            label="Alternate phone"
-            value={guardianAlternatePhone}
-            onChange={(e) => setGuardianAlternatePhone(e.target.value)}
-            pattern="0[2-5][0-9]{8}"
-            title="Enter a valid 10-digit Ghanaian phone number, e.g. 0501234567"
-            placeholder="0501234567"
+            label="Reason for leaving"
+            value={reasonForLeaving}
+            onChange={(e) => setReasonForLeaving(e.target.value)}
           />
-          <Input type="email" label="Email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} />
-          <Input label="Address" required value={guardianAddress} onChange={(e) => setGuardianAddress(e.target.value)} />
+          <Input
+            label="Medical condition"
+            placeholder="e.g. Asthma, none"
+            value={medicalCondition}
+            onChange={(e) => setMedicalCondition(e.target.value)}
+          />
         </div>
+      </div>
+
+      <div className="border-t border-border pt-4">
+        <p className="mb-1 text-sm font-medium text-zinc-700">Parent / Guardian</p>
+        <p className="mb-3 text-xs text-zinc-500">
+          Add at least one parent. Full name, phone, and address are required for whichever parent you add.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Mother</p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <Input
+                label={requiredLabel('Full name')}
+                value={motherName}
+                onChange={(e) => setMotherName(e.target.value)}
+              />
+              <Input
+                type="tel"
+                label={requiredLabel('Phone')}
+                value={motherPhone}
+                onChange={(e) => setMotherPhone(e.target.value)}
+                pattern="0[2-5][0-9]{8}"
+                title="Enter a valid 10-digit Ghanaian phone number, e.g. 0501234567"
+                placeholder="0501234567"
+              />
+              <Input
+                label={requiredLabel('Address')}
+                value={motherAddress}
+                onChange={(e) => setMotherAddress(e.target.value)}
+              />
+              <Input label="Occupation" value={motherOccupation} onChange={(e) => setMotherOccupation(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Father</p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <Input
+                label={requiredLabel('Full name')}
+                value={fatherName}
+                onChange={(e) => setFatherName(e.target.value)}
+              />
+              <Input
+                type="tel"
+                label={requiredLabel('Phone')}
+                value={fatherPhone}
+                onChange={(e) => setFatherPhone(e.target.value)}
+                pattern="0[2-5][0-9]{8}"
+                title="Enter a valid 10-digit Ghanaian phone number, e.g. 0501234567"
+                placeholder="0501234567"
+              />
+              <Input
+                label={requiredLabel('Address')}
+                value={fatherAddress}
+                onChange={(e) => setFatherAddress(e.target.value)}
+              />
+              <Input label="Occupation" value={fatherOccupation} onChange={(e) => setFatherOccupation(e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        {guardianError && <p className="mt-3 text-sm text-danger-600">{guardianError}</p>}
       </div>
 
       {mutation.isError && (

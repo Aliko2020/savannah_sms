@@ -81,6 +81,9 @@ export interface TeacherDetail extends Teacher {
   bankName: string | null;
   bankAccountNumber: string | null;
   ssnitNumber: string | null;
+  religion: string | null;
+  isLicensed: boolean;
+  licenseNumber: string | null;
   assignedClasses: { id: string; name: string; code: string; category: ClassCategory; studentCount: number }[];
   totalStudents: number;
 }
@@ -296,12 +299,16 @@ export interface StudentGuardianDetail {
   alternatePhone: string | null;
   email: string | null;
   address: string | null;
+  occupation: string | null;
   relation: GuardianRelation;
   isPrimary: boolean;
 }
 
 export interface StudentDetail extends StudentListItem {
   username: string;
+  previousSchool: string | null;
+  reasonForLeaving: string | null;
+  medicalCondition: string | null;
   guardians: StudentGuardianDetail[];
 }
 

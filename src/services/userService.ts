@@ -12,6 +12,16 @@ import {
 } from '../generated/prisma/client';
 import { addGuardianToStudent } from './guardianService';
 
+interface GuardianEntry {
+  fullName: string;
+  phone: string;
+  alternatePhone?: string;
+  email?: string;
+  address?: string;
+  occupation?: string;
+  relation: GuardianRelation;
+}
+
 interface ProfileData {
   department?: Department;
   phone?: string;
@@ -19,15 +29,21 @@ interface ProfileData {
   employmentStatus?: EmploymentStatus;
   contractType?: ContractType;
   ssnitNumber?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  religion?: string;
+  isLicensed?: boolean;
+  licenseNumber?: string;
   dateOfBirth?: string;
   gender?: Gender;
   classId?: string;
-  guardianName?: string;
-  guardianPhone?: string;
-  guardianAlternatePhone?: string;
-  guardianEmail?: string;
-  guardianAddress?: string;
-  guardianRelation?: GuardianRelation;
+  // Prior schooling — free text, all optional.
+  previousSchool?: string;
+  reasonForLeaving?: string;
+  medicalCondition?: string;
+  // Zero or more guardians (e.g. mother + father) recorded at enrollment
+  // time. The first entry is treated as primary.
+  guardians?: GuardianEntry[];
   // Admin-recorded debt for a transferred student (e.g. an unpaid balance
   // from their previous school). Added on top of their prorated fee, never
   // in place of it.
@@ -134,6 +150,11 @@ export const createUserAccount = async (input: CreateUserInput) => {
           employmentStatus: input.profileData.employmentStatus,
           contractType: input.profileData.contractType,
           ssnitNumber: input.profileData.ssnitNumber,
+          bankName: input.profileData.bankName,
+          bankAccountNumber: input.profileData.bankAccountNumber,
+          religion: input.profileData.religion,
+          isLicensed: input.profileData.isLicensed ?? false,
+          licenseNumber: input.profileData.isLicensed ? input.profileData.licenseNumber : undefined,
         },
       });
     } else if (input.role === 'STUDENT' && input.profileData) {
@@ -154,21 +175,27 @@ export const createUserAccount = async (input: CreateUserInput) => {
           admissionNumber,
           dateOfBirth: new Date(input.profileData.dateOfBirth!),
           gender: input.profileData.gender,
+          previousSchool: input.profileData.previousSchool,
+          reasonForLeaving: input.profileData.reasonForLeaving,
+          medicalCondition: input.profileData.medicalCondition,
           enrolmentTermId: currentTerm?.id ?? null,
           enrolmentDate: new Date(),
           openingBalance: input.profileData.openingBalance ?? 0,
         },
       });
 
-      if (input.profileData.guardianName && input.profileData.guardianPhone) {
+      // First guardian in the list (e.g. Mother, if provided) is treated as
+      // primary — the one used for SMS reminders and default contact.
+      for (const [index, guardian] of (input.profileData.guardians ?? []).entries()) {
         await addGuardianToStudent(tx, studentProfile.id, {
-          fullName: input.profileData.guardianName,
-          phone: input.profileData.guardianPhone,
-          alternatePhone: input.profileData.guardianAlternatePhone,
-          email: input.profileData.guardianEmail,
-          address: input.profileData.guardianAddress,
-          relation: input.profileData.guardianRelation,
-          isPrimary: true,
+          fullName: guardian.fullName,
+          phone: guardian.phone,
+          alternatePhone: guardian.alternatePhone,
+          email: guardian.email,
+          address: guardian.address,
+          occupation: guardian.occupation,
+          relation: guardian.relation,
+          isPrimary: index === 0,
         });
       }
 

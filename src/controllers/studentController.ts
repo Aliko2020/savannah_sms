@@ -66,7 +66,15 @@ export const getStudent = async (req: Request, res: Response): Promise<Response>
           relation: true,
           isPrimary: true,
           guardian: {
-            select: { id: true, fullName: true, phone: true, alternatePhone: true, email: true, address: true },
+            select: {
+              id: true,
+              fullName: true,
+              phone: true,
+              alternatePhone: true,
+              email: true,
+              address: true,
+              occupation: true,
+            },
           },
         },
       },
@@ -87,6 +95,9 @@ export const getStudent = async (req: Request, res: Response): Promise<Response>
     gender: student.gender,
     dateOfBirth: student.dateOfBirth,
     class: student.enrollments[0]?.class ?? null,
+    previousSchool: student.previousSchool,
+    reasonForLeaving: student.reasonForLeaving,
+    medicalCondition: student.medicalCondition,
     guardians: student.guardians.map((g) => ({
       guardianId: g.guardian.id,
       fullName: g.guardian.fullName,
@@ -94,6 +105,7 @@ export const getStudent = async (req: Request, res: Response): Promise<Response>
       alternatePhone: g.guardian.alternatePhone,
       email: g.guardian.email,
       address: g.guardian.address,
+      occupation: g.guardian.occupation,
       relation: g.relation,
       isPrimary: g.isPrimary,
     })),
@@ -150,7 +162,7 @@ export const resetStudentPassword = async (req: Request, res: Response): Promise
 
 export const createGuardian = async (req: Request, res: Response): Promise<Response> => {
   const studentId = String(req.params.id);
-  const { fullName, phone, alternatePhone, email, address, relation, isPrimary } = req.body;
+  const { fullName, phone, alternatePhone, email, address, occupation, relation, isPrimary } = req.body;
 
   if (!fullName || !phone || !address) {
     return res.status(400).json({ error: 'fullName, phone, and address are required.' });
@@ -185,6 +197,7 @@ export const createGuardian = async (req: Request, res: Response): Promise<Respo
         alternatePhone: normalizedAltPhone,
         email,
         address,
+        occupation,
         relation,
         isPrimary,
       }),
@@ -200,7 +213,7 @@ export const createGuardian = async (req: Request, res: Response): Promise<Respo
 export const updateGuardian = async (req: Request, res: Response): Promise<Response> => {
   const studentId = String(req.params.id);
   const guardianId = String(req.params.guardianId);
-  const { fullName, phone, alternatePhone, email, address, relation, isPrimary } = req.body;
+  const { fullName, phone, alternatePhone, email, address, occupation, relation, isPrimary } = req.body;
 
   if (relation !== undefined && !isValidGuardianRelation(relation)) {
     return res.status(400).json({ error: 'Invalid relation.' });
@@ -237,6 +250,7 @@ export const updateGuardian = async (req: Request, res: Response): Promise<Respo
         alternatePhone: normalizedAltPhone !== undefined ? normalizedAltPhone : alternatePhone,
         email,
         address,
+        occupation,
         relation,
         isPrimary,
       }),

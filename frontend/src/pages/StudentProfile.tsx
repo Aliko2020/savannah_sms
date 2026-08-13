@@ -25,6 +25,7 @@ interface GuardianFormState {
   alternatePhone: string;
   email: string;
   address: string;
+  occupation: string;
   relation: GuardianRelation;
   isPrimary: boolean;
 }
@@ -35,6 +36,7 @@ const EMPTY_GUARDIAN_FORM: GuardianFormState = {
   alternatePhone: '',
   email: '',
   address: '',
+  occupation: '',
   relation: 'GUARDIAN',
   isPrimary: false,
 };
@@ -46,6 +48,7 @@ function guardianToForm(g: StudentGuardianDetail): GuardianFormState {
     alternatePhone: g.alternatePhone ?? '',
     email: g.email ?? '',
     address: g.address ?? '',
+    occupation: g.occupation ?? '',
     relation: g.relation,
     isPrimary: g.isPrimary,
   };
@@ -118,6 +121,11 @@ function GuardianForm({
           value={form.address}
           onChange={(e) => setForm({ ...form, address: e.target.value })}
         />
+        <Input
+          label="Occupation"
+          value={form.occupation}
+          onChange={(e) => setForm({ ...form, occupation: e.target.value })}
+        />
       </div>
 
       <Checkbox
@@ -176,6 +184,7 @@ export function StudentProfilePage() {
           alternatePhone: form.alternatePhone || null,
           email: form.email || null,
           address: form.address || null,
+          occupation: form.occupation || null,
         }),
       }),
     onSuccess: () => {
@@ -195,6 +204,7 @@ export function StudentProfilePage() {
           alternatePhone: form.alternatePhone || null,
           email: form.email || null,
           address: form.address || null,
+          occupation: form.occupation || null,
         }),
       }),
     onSuccess: () => {
@@ -272,20 +282,40 @@ export function StudentProfilePage() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
             <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Personal Info</h2>
-            <dl className="space-y-3 text-sm">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
               <div>
-                <dt className="text-zinc-500">Gender</dt>
-                <dd className="text-zinc-900">
+                <dt className="text-xs text-zinc-500">Gender</dt>
+                <dd className="mt-0.5 font-medium text-zinc-900">
                   {student.gender === 'MALE' ? 'Male' : student.gender === 'FEMALE' ? 'Female' : '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-zinc-500">Date of Birth</dt>
-                <dd className="text-zinc-900">{new Date(student.dateOfBirth).toLocaleDateString()}</dd>
+                <dt className="text-xs text-zinc-500">Date of Birth</dt>
+                <dd className="mt-0.5 font-medium text-zinc-900">
+                  {new Date(student.dateOfBirth).toLocaleDateString()}
+                </dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-xs text-zinc-500">Class</dt>
+                <dd className="mt-0.5 font-medium text-zinc-900">
+                  {student.class ? titleCase(student.class.name) : '—'}
+                </dd>
+              </div>
+
+              <div className="col-span-2 border-t border-border pt-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Prior Schooling</p>
               </div>
               <div>
-                <dt className="text-zinc-500">Class</dt>
-                <dd className="text-zinc-900">{student.class ? titleCase(student.class.name) : '—'}</dd>
+                <dt className="text-xs text-zinc-500">Previous School</dt>
+                <dd className="mt-0.5 font-medium text-zinc-900">{student.previousSchool ?? 'Not provided'}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-zinc-500">Reason for Leaving</dt>
+                <dd className="mt-0.5 font-medium text-zinc-900">{student.reasonForLeaving ?? 'Not provided'}</dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-xs text-zinc-500">Medical Condition</dt>
+                <dd className="mt-0.5 font-medium text-zinc-900">{student.medicalCondition ?? 'Not provided'}</dd>
               </div>
             </dl>
           </div>
@@ -335,9 +365,9 @@ export function StudentProfilePage() {
                       onSubmit={(form) => updateGuardian.mutate({ guardianId: g.guardianId, form })}
                     />
                   ) : (
-                    <dl className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <dd className="font-medium text-zinc-900">{g.fullName}</dd>
+                    <div>
+                      <div className="mb-3 flex items-center gap-2">
+                        <span className="font-medium text-zinc-900">{g.fullName}</span>
                         <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
                           {GUARDIAN_RELATION_LABELS[g.relation]}
                         </span>
@@ -358,27 +388,35 @@ export function StudentProfilePage() {
                           Edit
                         </Button>
                       </div>
-                      <div>
-                        <dt className="text-zinc-500">Phone</dt>
-                        <dd className="text-zinc-900">{g.phone}</dd>
-                      </div>
-                      {g.alternatePhone && (
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                         <div>
-                          <dt className="text-zinc-500">Alternate Phone</dt>
-                          <dd className="text-zinc-900">{g.alternatePhone}</dd>
+                          <dt className="text-xs text-zinc-500">Phone</dt>
+                          <dd className="mt-0.5 text-zinc-900">{g.phone}</dd>
                         </div>
-                      )}
-                      {g.email && (
+                        {g.alternatePhone && (
+                          <div>
+                            <dt className="text-xs text-zinc-500">Alternate Phone</dt>
+                            <dd className="mt-0.5 text-zinc-900">{g.alternatePhone}</dd>
+                          </div>
+                        )}
+                        {g.email && (
+                          <div>
+                            <dt className="text-xs text-zinc-500">Email</dt>
+                            <dd className="mt-0.5 text-zinc-900">{g.email}</dd>
+                          </div>
+                        )}
                         <div>
-                          <dt className="text-zinc-500">Email</dt>
-                          <dd className="text-zinc-900">{g.email}</dd>
+                          <dt className="text-xs text-zinc-500">Address</dt>
+                          <dd className="mt-0.5 text-zinc-900">{g.address ?? '—'}</dd>
                         </div>
-                      )}
-                      <div>
-                        <dt className="text-zinc-500">Address</dt>
-                        <dd className="text-zinc-900">{g.address ?? '—'}</dd>
-                      </div>
-                    </dl>
+                        {g.occupation && (
+                          <div>
+                            <dt className="text-xs text-zinc-500">Occupation</dt>
+                            <dd className="mt-0.5 text-zinc-900">{g.occupation}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </div>
                   )}
                 </div>
               ))}
