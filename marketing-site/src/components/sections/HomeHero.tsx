@@ -15,8 +15,8 @@ export function HomeHero() {
             </div>
 
             <h1 className="max-w-xl font-sans text-4xl font-black leading-[1.02] tracking-tight text-paper sm:text-5xl">
-              Modern software that grow your <br />
-              <span className="text-accent"> Bussiness.</span>
+              Modern software that grows your  <br />
+              <span className="text-accent"> business.</span>
             </h1>
 
             <p className="mt-7 max-w-md text-sm text-paper-muted">
