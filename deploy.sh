@@ -12,6 +12,9 @@ git pull
 echo "==> Building frontend"
 docker run --rm -v "$(pwd)/frontend:/app" -w /app node:22-alpine sh -c "npm ci && npm run build"
 
+echo "==> Building marketing site"
+docker run --rm -v "$(pwd)/marketing-site:/app" -w /app node:22-alpine sh -c "npm ci && npm run build"
+
 echo "==> Rebuilding and restarting backend"
 docker compose up -d --build
 
