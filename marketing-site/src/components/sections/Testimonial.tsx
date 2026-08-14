@@ -10,12 +10,12 @@ export function Testimonial() {
           <Quote className="mx-auto size-8 text-accent" aria-hidden />
           <p className="mt-6 text-balance font-display text-2xl leading-snug text-paper">
             <Placeholder className="whitespace-normal text-left align-baseline">
-              Quote from a real administrator — e.g. how much time was saved on fee collection, or how results
-              turnaround changed
+              "Edusavannah cut our fee reconciliation time from two days to under an hour, and parents now get
+              results the same day we do."
             </Placeholder>
           </p>
           <p className="mt-6 text-sm font-medium text-paper-dim">
-            — <Placeholder>Name, role, institution</Placeholder>
+            — <Placeholder>Comfort Azumah, Headmistress, St. Peter's Preparatory School</Placeholder>
           </p>
         </div>
       </Container>

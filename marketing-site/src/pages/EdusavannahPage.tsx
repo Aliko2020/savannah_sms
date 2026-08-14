@@ -1,6 +1,5 @@
 import { PageHero } from '../components/sections/PageHero';
 import { FeatureGrid } from '../components/sections/FeatureGrid';
-import { Testimonial } from '../components/sections/Testimonial';
 import { FAQSection } from '../components/sections/FAQSection';
 import { ClosingCTA } from '../components/sections/ClosingCTA';
 import { Button } from '../components/ui/Button';
@@ -24,7 +23,6 @@ export function EdusavannahPage() {
       </PageHero>
 
       <FeatureGrid features={edusavannahFeatures} />
-      <Testimonial />
       <FAQSection items={edusavannahFaq} />
       <ClosingCTA primaryLabel="Open Edusavannah" primaryHref={APP_URL} />
     </>
