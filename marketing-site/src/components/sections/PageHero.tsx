@@ -16,7 +16,7 @@ export function PageHero({
   children?: ReactNode;
 }) {
   return (
-    <section className="border-b border-paper/10 py-20 sm:py-24">
+    <section className="border-b border-paper/10 py-20 sm:py-24 md:h-screen">
       <Container className="text-center">
         <Eyebrow>{tag}</Eyebrow>
         <h1 className="mx-auto max-w-3xl text-balance text-4xl font-bold leading-tight text-paper sm:text-5xl">

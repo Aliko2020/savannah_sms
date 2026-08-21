@@ -10,7 +10,7 @@ export interface NavLink {
 export const productLinks: NavLink[] = [
   { label: 'Edusavannah', sub: 'School Management', to: '/edusavannah', icon: GraduationCap },
   { label: 'Digital Skills Training', sub: 'Workforce Development', to: '/training', icon: Code2 },
-  { label: 'Bulk SMS', sub: 'Messaging Infrastructure', to: '/bulk-sms', icon: MessageSquare },
+  // { label: 'Bulk SMS', sub: 'Messaging Infrastructure', to: '/bulk-sms', icon: MessageSquare },
 ];
 
 export const companyLinks: NavLink[] = [

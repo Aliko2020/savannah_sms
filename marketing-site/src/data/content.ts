@@ -26,10 +26,13 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+
+
 export interface FeatureItem {
   title: string;
   description: string;
-  icon: LucideIcon;
+  icon?: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+  image?: string;
 }
 
 export interface FaqItem {
@@ -202,7 +205,6 @@ export const bulkSmsFaq: FaqItem[] = [
 export interface CourseTrack {
   track: string;
   modules: string;
-  outcome: string;
   targetAudience: string;
   /** False (default) means targetAudience is a placeholder instruction, not confirmed copy. */
   audienceConfirmed?: boolean;
@@ -214,60 +216,74 @@ export interface CourseTrack {
 
 export const courseCatalog: CourseTrack[] = [
   {
-    track: 'Digital Literacy',
-    modules: 'Word Processing & Office Tools',
-    outcome: 'Build foundational digital & office skills for the modern workplace',
-    targetAudience: 'Working professionals, Schools',
+    track: 'Computer Fundamentals & Digital Literacy',
+    modules: 'Hardware & OS Basics, File Management, Internet Safety & Email, Word Processing & Basic Spreadsheets',
+    targetAudience: 'Grade 4 to JHS 3 Students, Absolute Beginners, Working Professionals, Schools',
     audienceConfirmed: true,
     duration: '16 Weeks',
     durationConfirmed: true,
-    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)',
+    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)'
   },
   {
-    track: 'Coding & Logical Thinking',
-    modules: 'Python Basics, HTML5, CSS3',
-    outcome: 'Build a foundation in programming and web development',
-    targetAudience: 'Schools, Young Professional',
+    track: 'Python for Beginners',
+    modules: 'Start Your Programming Journey with Python: Learn one of the world’s most popular languages, covering variables, loops, data structures, and basic problem-solving',
+    targetAudience: 'Absolute Beginners, Schools, Young Professionals',
     audienceConfirmed: true,
     duration: '16 Weeks',
     durationConfirmed: true,
-    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)',
+    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)'
+  },
+  {
+    track: 'Web Development with AI',
+    modules: 'Build Modern Websites with the Power of AI: Learn how to design, develop, and deploy responsive websites using modern HTML/CSS, JavaScript, and AI-assisted coding tools',
+    targetAudience: 'People with basic computer skills, Career switchers',
+    audienceConfirmed: true,
+    duration: '16 Weeks',
+    durationConfirmed: true,
+    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)'
   },
   {
     track: 'French for Beginners',
     modules: 'French Fundamentals for Beginners',
-    outcome: 'Learn to read, write, and hold basic conversations in French',
     targetAudience: 'Learners with no prior French experience',
     audienceConfirmed: true,
     duration: '16 Weeks',
     durationConfirmed: true,
-    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)',
+    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)'
   },
   {
     track: 'Language & Global Skills',
     modules: 'French Fundamentals & Business Communication',
-    outcome: 'Expand career opportunities across Francophone Africa',
     targetAudience: 'Learners with no prior French experience',
     audienceConfirmed: true,
     duration: '16 Weeks',
     durationConfirmed: true,
-    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)',
+    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)'
   },
   {
-    track: 'Robotics',
-    modules: 'Robotics Fundamentals, Sensors & Actuators, Basic Programming for Robotics',
-    outcome: 'Build a foundation in robotics and embedded systems',
-    targetAudience: 'Schools',
+    track: 'Cloud Fundamentals',
+    modules: 'Introduction to Cloud Computing: Learn core cloud concepts, service models (IaaS, PaaS, SaaS), cloud security, storage, networking, and deployment across top cloud providers like AWS and Azure',
+    targetAudience: 'People with basic computer skills, IT enthusiasts, Career switchers',
     audienceConfirmed: true,
-    duration: '12 Weeks',
+    duration: '16 Weeks',
     durationConfirmed: true,
-    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)',
-  },
+    deliveryModel: 'Virtual Classroom, In-Person (One-on-One)'
+  }
 ];
 
 export const deliveryModels: FeatureItem[] = [
-  { title: 'Virtual Classroom', description: 'Interactive, live online sessions accessible from anywhere', icon: Monitor },
-  { title: 'In-Person Classroom', description: 'Hands-on sessions at the Bolgatanga training center', icon: Building2 },
+  {
+    title: 'In-Person (One-on-One)',
+    description: 'Set days available to learn, Select a course you want to learn. Edusavannah works around your calendar.',
+    icon: Building2,
+    image: '/images/woman-teaching-kid.jpg',
+  },
+  {
+    title: 'Live Online Learning',
+    description: 'Dynamic, instructor-led sessions streamed live so you can learn from anywhere.',
+    icon: Monitor,
+    image: '/images/african.jpg',
+  },
 ];
 
 export const trainingFaq: FaqItem[] = [
