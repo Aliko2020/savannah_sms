@@ -1,4 +1,4 @@
-import { GraduationCap, MessageSquare, Code2, Info, Mail, type LucideIcon } from 'lucide-react';
+import { GraduationCap, Code2, Info, Mail, type LucideIcon } from 'lucide-react';
 
 export interface NavLink {
   label: string;
