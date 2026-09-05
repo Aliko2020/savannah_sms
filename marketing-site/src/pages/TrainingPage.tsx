@@ -14,12 +14,12 @@ export function TrainingPage() {
         title="Give your child a competitive edge."
         subhead="Nurturing Young Minds with Practical Tech Skills for Tomorrow’s Digital Economy.built to produce skills that stick, not just certificates."
         meta={["📍 In-Person (Bolgatanga)", "Online"]}
+        bgImageUrl="/images/"
       >
         <Button variant="secondary" to="/contact">
           Inquire
         </Button>
         <Button
-          as="a"
           href="/Course_Catalog.pdf"
           download="Course_Catalog.pdf"
           variant="primary"
