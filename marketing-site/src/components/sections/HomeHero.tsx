@@ -29,9 +29,6 @@ export function HomeHero() {
                 Get Started
                 <ArrowRight className="size-4" aria-hidden />
               </Button>
-              <Button variant="secondary" to="/contact">
-                Book a Demo
-              </Button>
             </div>
           </div>
 

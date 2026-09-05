@@ -5,13 +5,16 @@ export function FeatureGrid({ features, columns = 2 }: { features: FeatureItem[]
   const colClass = columns === 2 ? 'sm:grid-cols-2' : columns === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4';
 
   return (
-    <section className="">
+    <section className="p-4">
       <Container>
+        <h1 className="mx-auto max-w-3xl text-2xl p-8 text-center text-paper">
+          Replace disconnected tools with one source of truth.
+        </h1>
         <div className={`grid grid-cols-1 gap-5 ${colClass}`}>
           {features.map((feature) => (
             <div 
               key={feature.title} 
-              className="group overflow-hidden rounded-2xl border border-paper/10 bg-ink-raised transition-all hover:border-paper/20"
+              className="group overflow-hidden rounded-2xl border p-4 border-paper/10 bg-ink-raised transition-all hover:border-paper/20"
             >
               <div className={`flex flex-col gap-5 ${feature.image ? 'lg:flex-row lg:items-center' : ''}`}>
                 
